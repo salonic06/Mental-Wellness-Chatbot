@@ -1,0 +1,23 @@
+{
+  "calm": {
+    "inhale": 4,
+    "hold": 4,
+    "exhale": 4,
+    "rounds": 4,
+    "description": "A calming breathing exercise for stress relief."
+  },
+  "relaxation": {
+    "inhale": 4,
+    "hold": 7,
+    "exhale": 8,
+    "rounds": 3,
+    "description": "A relaxation breathing exercise for deep relaxation."
+  },
+  "energize": {
+    "inhale": 6,
+    "hold": 2,
+    "exhale": 4,
+    "rounds": 5,
+    "description": "An energizing breathing exercise to boost your energy."
+  }
+}

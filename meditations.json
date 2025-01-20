@@ -1,0 +1,35 @@
+{
+    "quick": {
+        "duration": 3,
+        "intervals": [0, 1, 2, 3],
+        "script": {
+            "0": "Let's begin your 3-minute mindfulness meditation.\n\nFind a comfortable position...\nGently close your eyes...\nTake a deep breath...\n\nType 'ready' to begin.",
+            "1": "Focus on your breath...\nNotice the sensation of air flowing in and out...\nIf your mind wanders, gently bring it back to your breath...\n[1 minute passed]",
+            "2": "Now bring awareness to your body...\nRelease any tension you notice...\nStay present with each moment...\n[2 minutes passed]",
+            "3": "Take two more deep breaths...\nSlowly open your eyes...\nTake a moment to notice how you feel...\nMeditation complete! How do you feel? Type /mood to log your state."
+        }
+    },
+    "medium": {
+        "duration": 10,
+        "intervals": [0, 2, 4, 6, 8, 10],
+        "script": {
+            "0": "Welcome to your 10-minute meditation session.\n\nFind a quiet, comfortable space...\nSettle into a relaxed position...\nGently close your eyes...\n\nType 'ready' to begin.",
+            "2": "Focus on your natural breath...\nNo need to change anything...\nJust observe the rhythm of your breathing...\n[2 minutes passed]",
+            "4": "Now expand your awareness...\nNotice any sounds in your environment...\nLet them come and go without judgment...\n[4 minutes passed]",
+            "6": "Bring attention to your body...\nNotice any sensations...\nAccept them with gentle awareness...\n[6 minutes passed]",
+            "8": "Return focus to your breath...\nFeel the calming rhythm...\nEach breath bringing peace...\n[8 minutes passed]",
+            "10": "Take three deep breaths...\nSlowly wiggle your fingers and toes...\nOpen your eyes when ready...\nMeditation complete! Share your experience with /mood."
+        }
+    },
+    "long": {
+        "duration": 20,
+        "intervals": [0, 5, 10, 15, 20],
+        "script": {
+            "0": "Welcome to your 20-minute deep meditation session.\n\nFind a comfortable seated position...\nEnsure your spine is straight but relaxed...\nTake three deep clearing breaths...\n\nType 'ready' to begin.",
+            "5": "Begin with body awareness...\nScan from your toes to your head...\nRelease any tension you discover...\n[5 minutes passed]",
+            "10": "Now focus on your breath...\nNotice its natural rhythm...\nLet it anchor you to the present moment...\n[10 minutes passed]",
+            "15": "Expand awareness to your thoughts...\nWatch them pass like clouds in the sky...\nNo need to engage with them...\n[15 minutes passed]",
+            "20": "Slowly bring your awareness back...\nTake a few deep breaths...\nGently open your eyes...\nMeditation complete! Use /mood to reflect on your experience."
+        }
+    }
+}

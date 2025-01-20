@@ -1,0 +1,12 @@
+{
+  "/start": "start_command",
+  "/mood": "log_mood",
+  "/breathe": "breathing_exercise",
+  "/meditate": "meditation_guide",
+  "/affirmation": "daily_affirmation",
+  "/help": "help_command",
+  "/vent": "vent_session",
+  "/analyze": "mood_analysis",
+  "/checklimit": "check_limit_command",
+  "/checkusage": "check_usage_command"
+}

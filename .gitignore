@@ -1,0 +1,6 @@
+.env
+*.log
+__pycache__/
+.idea/
+*.pyc
+wellness.db

@@ -1,0 +1,14 @@
+{
+  "intro": "I'm here to listen. What's on your mind?\nShare your thoughts and feelings freely. Take your time. 🌸",
+  "strong_negative": "I hear that you're going through a difficult time. Your feelings are valid and important. 🫂\nWould you like to:\n- Try a calming breathing exercise? (/breathe)\n- Get an uplifting affirmation? (/affirmation)\n- Start a gentle meditation? (/meditate quick)",
+  "mild_negative": "I understand this is challenging, and it's good that you're expressing these feelings. 🌸\nSometimes sharing our thoughts can help us process them better.\nWould you like to try:\n- A breathing exercise to help center yourself? (/breathe)\n- Or we can continue talking about it?",
+  "strong_positive": "It's wonderful to hear you expressing such positive thoughts! 🌟\nThese moments are worth celebrating and remembering.\nWould you like to:\n- Log this positive mood? (/mood)\n- Or try a meditation to savor these good feelings? (/meditate)",
+  "mild_positive": "I'm glad you're sharing these thoughts! It's wonderful that you're expressing yourself. ✨\nWould you like to:\n- Log this positive moment? (/mood)\n- Or get an affirmation to build on these good feelings? (/affirmation)",
+  "neutral": "Thank you for sharing. Sometimes feelings can be complex and that's completely normal. 🌱\nWould you like to:\n- Explore these feelings more?\n- Or try logging your mood to track your emotional journey? (/mood)",
+  "sentiment_words": {
+    "strong_negative": ["horrible", "terrible", "devastated", "miserable", "hate", "furious", "depressed", "awful", "angry", "desperate", "scared", "terrified", "heartbroken", "crying", "panic", "anxiety", "worried sick", "crisis", "nightmare", "unbearable", "worst", "never", "alone", "lonely"],
+    "mild_negative": ["sad", "upset", "disappointed", "frustrated", "tired", "stressed", "worried", "annoyed", "hurt", "confused", "uncertain", "meh", "not great", "struggling", "difficult", "hard time", "bothered"],
+    "mild_positive": ["good", "happy", "better", "okay", "fine", "alright", "calm", "pleased", "satisfied", "content", "hopeful", "relaxed", "grateful", "thank", "thanks", "improving", "progress", "better"],
+    "strong_positive": ["amazing", "excellent", "wonderful", "fantastic", "great", "awesome", "love", "excited", "thrilled", "overjoyed", "blessed", "incredible", "perfect", "brilliant", "outstanding", "peaceful", "joy", "ecstatic", "best", "super", "extremely happy"]
+  }
+}
