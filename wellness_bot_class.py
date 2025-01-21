@@ -79,27 +79,53 @@ class WellnessBot:
             logger.error(f"Error adding user to DB: {e}")
 
     def log_mood(self, args, sender):
+        if not args:
+            return ("How are you feeling? Rate your mood from 1-10 and add a note:\n"
+                    "Example: /mood 7 feeling optimistic today")
+
         try:
             parts = args.split(' ', 1)
             intensity = int(parts[0])
-            notes = parts[1] if len(parts) > 1 else ""
-            if 1 <= intensity <=10:
-                conn = sqlite3.connect('wellness.db')
-                c = conn.cursor()
-                c.execute('''INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
-                             VALUES (?, ?, ?, ?, ?)''', (sender, "mood", intensity, datetime.now(), notes))
-                conn.commit()
-                conn.close()
-                return "Mood logged successfully!"
+            notes = parts[1] if len(parts) > 1 else ''
+
+            if not 1 <= intensity <= 10:
+                return "Please rate your mood between 1 and 10."
+
+            conn = sqlite3.connect('wellness.db')
+            c = conn.cursor()
+            c.execute('''INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
+                        VALUES (?, ?, ?, ?, ?)''',
+                      (sender, 'mood_log', intensity, datetime.now(), notes))
+            conn.commit()
+            conn.close()
+
+            response = "Thanks for sharing! 📝\n"
+            if intensity <= 3:
+                response += (
+                    "I'm sorry to hear you're feeling so low.  It's important to reach out for support. Would you like to:\n"
+                    "- Try a breathing exercise? (/breathe)\n"
+                    "- Talk about it? (/vent)\n"
+                    "- Get an affirmation? (/affirmation)")
+            elif intensity <= 5:
+                response += ("I notice you're not feeling your best. Would you like to:\n"
+                             "- Try a breathing exercise? (/breathe)\n"
+                             "- Talk about it? (/vent)\n"
+                             "- Get an affirmation? (/affirmation)")
+            elif intensity <= 7:
+                response += (
+                    "It sounds like you're feeling somewhat down.  Remember that it's okay to not be okay.  Would you like to try a meditation? (/meditate)")
             else:
-                return "Please enter a mood intensity between 1 and 10."
+                response += (
+                    "That's great to hear! Let's keep that positive feeling going.  How about trying a guided meditation to enhance your good mood? (/meditate)")
+
+
+            return response
+
         except ValueError:
             return "Invalid input. Please enter a number between 1 and 10 followed by optional notes."
         except Exception as e:
             logger.error(f"Error logging mood: {e}")
             return "Sorry, there was an error logging your mood. Please try again later."
-
-
 
     def breathing_exercise(self, args, sender):
       pattern_name = args.lower() or 'calm' # Default to 'calm' if no pattern specified.
