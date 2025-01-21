@@ -13,30 +13,19 @@ logger = logging.getLogger(__name__)
 
 load_dotenv() # Load environment variables from .env file
 class WellnessBot:
-    def __init__(self, config_file='config.json'):
-        try:
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-                self.twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-                self.twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-                self.twilio_phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
-                self.admin_numbers = config.get('admin_numbers', [])
-                self.timezone = config.get('timezone', 'UTC')
-
-                # Check if environment variables are set, handle missing variables appropriately.
-                if not all([self.twilio_account_sid, self.twilio_auth_token, self.twilio_phone_number]):
-                    raise ValueError("Missing Twilio environment variables")
-
-        except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
-            logger.error(f"Error loading config from {config_file}: {e}")
-            # Handle the error appropriately (e.g., use default values or exit)
-            raise  #Re-raise the exception to be handled at a higher level if needed.
-
+    def __init__(self):
+        self.twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+        self.twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        self.twilio_phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
+        self.admin_numbers = os.environ.get('ADMIN_NUMBERS', '').split(',')  # Handle comma-separated list if needed
+        self.timezone = os.environ.get('TIMEZONE', 'UTC')
         self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
 
-        # Load JSON data with improved error handling
-        self._load_json_data()
+        if not all([self.twilio_account_sid, self.twilio_auth_token, self.twilio_phone_number]):
+            raise ValueError("Missing Twilio environment variables")
 
+        self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
+        self._load_json_data()
 
     def _load_json_data(self):
         self.meditations = {}

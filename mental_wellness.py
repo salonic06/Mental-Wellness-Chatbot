@@ -6,6 +6,10 @@ import json
 import logging
 import sqlite3
 from wellness_bot_class import WellnessBot
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Load config
 def load_config():
@@ -150,21 +154,23 @@ def health_check():
 
 if __name__ == '__main__':
     try:
-        # Verify config loading
-        if not config:
-            logger.error("Failed to load configuration")
-            sys.exit(1)
+        # CORRECT:  Uses environment variables and load_config
+        twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+        twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+        twilio_phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
 
-        # Verify required config values
-        required_configs = ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number']
-        missing_configs = [cfg for cfg in required_configs if cfg not in config]
-        if missing_configs:
-            logger.error(f"Missing required configurations: {', '.join(missing_configs)}")
-            sys.exit(1)
+        if not all([twilio_account_sid, twilio_auth_token, twilio_phone_number]):
+            raise ValueError("Missing Twilio configurations")
+        # Verify config loading
 
         # Database initialization
         init_db()
         logger.info("Database initialized successfully")
         app.run(debug=True, port=5000)
+
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)  # Exit with error code 1
     except Exception as e:
-        logger.exception(f"Failed to start application: {e}") #Logs the full traceback for debugging
+        logger.exception(f"An unexpected error occurred: {e}")
+        sys.exit(1)  # Exit with error code 1
