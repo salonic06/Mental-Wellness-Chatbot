@@ -136,8 +136,9 @@ See roadmap: **long-lived token** and **production access** are planned for late
 When `ENABLE_MEDITATION_NUDGES=true` (default in `render.yaml`):
 
 1. User starts `/meditate quick` (or medium/long) and types **ready**.
-2. The bot sends part 2 immediately, then **automatic WhatsApp messages** for later parts using gaps from `meditations.json` (e.g. ~1 min for quick).
-3. Typing **next**, **pause**, or **end** cancels pending nudges.
+2. The bot sends part 2 at **ready**, then automatic messages at **2 min** and **3 min** after ready (quick session).
+3. **pause** stops timers; **resume** continues (catch-up if you were late).
+4. Typing **next** or **end** cancels pending nudges (manual **next** still works).
 
 Requires the **web service to stay running** (Render). Free tier sleep may delay the first nudge until the app wakes again.
 

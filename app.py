@@ -127,6 +127,7 @@ async def webhook_receive(
 
         reply = process_message(sender, raw)
         await api.send_reply(to=sender, reply=reply)
+        # After DB commit from process_message (e.g. ready → start_time)
         await on_meditation_user_message(sender, resolve_inbound_text(raw).strip().lower())
         return {"status": "ok"}
     except Exception as exc:

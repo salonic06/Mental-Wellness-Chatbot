@@ -182,14 +182,26 @@ class WellnessBot:
 
     def _meditation_pacing_hint(self, meditation: dict, step_index: int, keys: list) -> str:
         if step_index >= len(keys) - 1:
-            return "\n\nType **end** when you are finished, or **next** to close the session."
+            return "\n\nType **end** when you are finished."
+
         intervals = meditation.get("intervals") or []
+        try:
+            from meditation_scheduler import nudges_enabled
+
+            if nudges_enabled() and step_index < len(keys) - 1 and len(intervals) > step_index + 1:
+                gap = intervals[step_index + 1] - intervals[1]
+                if gap > 0:
+                    return (
+                        f"\n\nNext part arrives automatically in ~{gap} minute(s) "
+                        "(or type **next** to skip ahead)."
+                    )
+        except ImportError:
+            pass
+
         if step_index < len(intervals) - 1:
             gap = intervals[step_index + 1] - intervals[step_index]
             if gap > 0:
-                return (
-                    f"\n\nPause ~{gap} minute(s) if you like, then type **next** for the following part."
-                )
+                return f"\n\nPause ~{gap} minute(s), then type **next** for the following part."
         return "\n\nType **next** when you are ready for the following part."
 
     def meditation_guide(self, args, sender):
@@ -232,8 +244,9 @@ class WellnessBot:
         return (
             f"{intro}\n\n"
             f"*{selected['duration']}-minute session · {len(keys)} parts*\n"
-            "Type **ready** to begin — timed prompts will follow each part.\n"
-            "Or type **next** yourself anytime.\n"
+            f"Type **ready** to begin — the next parts arrive automatically "
+            f"(~{selected['duration']} min session).\n"
+            "Or type **next** to skip ahead. **pause** / **resume** control timers.\n"
             "**pause** · **resume** · **end** · **status**"
         )
 
@@ -288,7 +301,10 @@ class WellnessBot:
                     "UPDATE active_meditations SET paused = 0 WHERE user_phone = ?", (sender,)
                 )
                 conn.commit()
-                return "Resumed. Type **next** to continue."
+                return (
+                    "Resumed. The next part arrives in ~1 minute per step "
+                    "(or type **next** / **end**)."
+                )
 
             if paused:
                 return "Session is paused. Type **resume** or **end**."
@@ -321,7 +337,11 @@ class WellnessBot:
                     )
                 conn.commit()
 
-                body = script.get(keys[new_step], "Continue at your own pace.")
+                from meditation_scheduler import clean_script_body
+
+                body = clean_script_body(
+                    script.get(keys[new_step], "Continue at your own pace.")
+                )
                 hint = self._meditation_pacing_hint(meditation, new_step, keys)
                 return f"{body}{hint}"
 
