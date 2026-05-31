@@ -8,7 +8,7 @@
   "sentiment_words": {
     "strong_negative": ["horrible", "terrible", "devastated", "miserable", "hate", "furious", "depressed", "awful", "angry", "desperate", "scared", "terrified", "heartbroken", "crying", "panic", "anxiety", "worried sick", "crisis", "nightmare", "unbearable", "worst", "never", "alone", "lonely"],
     "mild_negative": ["sad", "upset", "disappointed", "frustrated", "tired", "stressed", "worried", "annoyed", "hurt", "confused", "uncertain", "meh", "not great", "struggling", "difficult", "hard time", "bothered"],
-    "mild_positive": ["good", "happy", "better", "okay", "fine", "alright", "calm", "pleased", "satisfied", "content", "hopeful", "relaxed", "grateful", "thank", "thanks", "improving", "progress", "better"],
-    "strong_positive": ["amazing", "excellent", "wonderful", "fantastic", "great", "awesome", "love", "excited", "thrilled", "overjoyed", "blessed", "incredible", "perfect", "brilliant", "outstanding", "peaceful", "joy", "ecstatic", "best", "super", "extremely happy"]
+    "mild_positive": ["good", "happy", "better", "okay", "fine", "alright", "calm", "pleased", "satisfied", "content", "hopeful", "relaxed", "grateful", "thank", "thanks", "improving", "progress", "delighted", "energetic", "lively", "cheerful", "upbeat"],
+    "strong_positive": ["amazing", "excellent", "wonderful", "fantastic", "great", "awesome", "love", "excited", "thrilled", "overjoyed", "blessed", "incredible", "perfect", "brilliant", "outstanding", "peaceful", "joy", "ecstatic", "best", "super", "extremely happy", "very happy", "so happy"]
   }
 }

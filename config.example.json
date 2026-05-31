@@ -1,0 +1,7 @@
+{
+  "timezone": "Asia/Kolkata",
+  "_comment": "Secrets belong in .env (see .env.example). Legacy Flask app may read optional keys below.",
+  "admin_numbers": ["+91XXXXXXXXXX"],
+  "weather_api_key": "your-openweather-key",
+  "news_api_key": "your-newsapi-key"
+}

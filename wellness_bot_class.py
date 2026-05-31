@@ -2,36 +2,49 @@ import json
 import os
 from dotenv import load_dotenv
 import logging
-from twilio.rest import Client
 from datetime import datetime
 import random
 import sqlite3
-import threading
-import time
 
 logger = logging.getLogger(__name__)
 
-load_dotenv() # Load environment variables from .env file
+load_dotenv()
+
+
+def _digits_only(phone: str) -> str:
+    return "".join(ch for ch in phone if ch.isdigit())
+
+
 class WellnessBot:
     def __init__(self):
-        self.twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-        self.twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-        self.twilio_phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
-        self.admin_numbers = os.environ.get('ADMIN_NUMBERS', '').split(',')  # Handle comma-separated list if needed
-        self.timezone = os.environ.get('TIMEZONE', 'UTC')
-        self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
+        self.timezone = os.environ.get("TIMEZONE", "UTC")
+        self.admin_numbers = [
+            _digits_only(n)
+            for n in os.environ.get("ADMIN_NUMBERS", "").split(",")
+            if n.strip()
+        ]
+        self.client = None
+        self.twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+        self.twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+        self.twilio_phone_number = os.environ.get("TWILIO_PHONE_NUMBER")
+        if all([self.twilio_account_sid, self.twilio_auth_token, self.twilio_phone_number]):
+            try:
+                from twilio.rest import Client
 
-        if not all([self.twilio_account_sid, self.twilio_auth_token, self.twilio_phone_number]):
-            raise ValueError("Missing Twilio environment variables")
+                self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
+            except Exception as e:
+                logger.warning("Twilio client not available: %s", e)
 
-        self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
         self._load_json_data()
+        if not self.affirmations:
+            logger.warning("Affirmations list is empty. Please check affirmations.json")
 
     def _load_json_data(self):
         self.meditations = {}
         self.vent_instructions = {}
         self.breathing_patterns = {}
-        json_files = ['meditations.json', 'vent_instructions.json', 'breathing_exercises.json']
+        self.affirmations = []  # Initialize as an empty list
+        json_files = ['meditations.json', 'vent_instructions.json', 'breathing_exercises.json', 'affirmations.json']
 
         for file in json_files:
             try:
@@ -43,17 +56,13 @@ class WellnessBot:
                         self.vent_instructions = data
                     elif file == 'breathing_exercises.json':
                         self.breathing_patterns = data
+                    elif file == 'affirmations.json':
+                        self.affirmations = data  # load affirmations from the new file
 
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 logger.error(f"Error loading JSON file {file}: {e}")
 
-        self.affirmations = [
-            "You are capable of amazing things.",
-            "Every day is a fresh start.",
-            "You have the power to create change.",
-            "Your mental health matters.",
-            "You are worthy of peace and happiness."
-        ]
+
 
 
     def start_command(self, args, sender):
@@ -65,6 +74,7 @@ class WellnessBot:
                 "- Receive daily affirmations with /affirmation\n"
                 "- Start a meditation session with /meditate\n"
                 "- Share your feelings with /vent\n"
+                "- Do a guided check-in with /checkin\n"
                 "Type /help anytime to see all commands.")
 
     def _add_user_to_db(self, phone_number):
@@ -90,6 +100,12 @@ class WellnessBot:
 
             if not 1 <= intensity <= 10:
                 return "Please rate your mood between 1 and 10."
+
+            if notes:
+                from sentiment_nlp import detect_crisis, handle_crisis
+
+                if detect_crisis(notes):
+                    return handle_crisis(sender, notes, source="mood", intensity=intensity)
 
             conn = sqlite3.connect('wellness.db')
             c = conn.cursor()
@@ -128,181 +144,222 @@ class WellnessBot:
             return "Sorry, there was an error logging your mood. Please try again later."
 
     def breathing_exercise(self, args, sender):
-      pattern_name = args.lower() or 'calm' # Default to 'calm' if no pattern specified.
-      if pattern_name not in self.breathing_patterns:
-          return "Breathing pattern not found. Try 'calm', 'relaxation', or 'energize'."
-      pattern = self.breathing_patterns[pattern_name]
-      instructions = f"Inhale for {pattern['inhale']} seconds, hold for {pattern['hold']} seconds, exhale for {pattern['exhale']} seconds. Repeat for {pattern['rounds']} rounds."
-      return instructions
+        if not args.strip():
+            lines = [
+                f"/breathe {name} — {info.get('description', '')}"
+                for name, info in self.breathing_patterns.items()
+            ]
+            return "Choose a breathing pattern:\n" + "\n".join(lines)
+
+        pattern_name = args.lower().split()[0]
+        if pattern_name not in self.breathing_patterns:
+            return "Pattern not found. Use: /breathe calm | relaxation | energize"
+        pattern = self.breathing_patterns[pattern_name]
+        return (
+            f"*{pattern_name.title()} breathing*\n"
+            f"Inhale {pattern['inhale']}s · hold {pattern['hold']}s · exhale {pattern['exhale']}s\n"
+            f"Repeat {pattern['rounds']} rounds at your own pace."
+        )
+
+    def clear_active_meditation(self, sender: str) -> None:
+        try:
+            conn = sqlite3.connect("wellness.db")
+            c = conn.cursor()
+            c.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            logger.error("Error clearing meditation: %s", e)
+
+    @staticmethod
+    def _meditation_script_keys(meditation: dict) -> list:
+        intervals = meditation.get("intervals") or []
+        if intervals:
+            return [str(i) for i in sorted(intervals)]
+        return sorted(meditation.get("script", {}).keys(), key=lambda k: int(k))
+
+    def _meditation_pacing_hint(self, meditation: dict, step_index: int, keys: list) -> str:
+        if step_index >= len(keys) - 1:
+            return "\n\nType **end** when you are finished, or **next** to close the session."
+        intervals = meditation.get("intervals") or []
+        if step_index < len(intervals) - 1:
+            gap = intervals[step_index + 1] - intervals[step_index]
+            if gap > 0:
+                return (
+                    f"\n\nPause ~{gap} minute(s) if you like, then type **next** for the following part."
+                )
+        return "\n\nType **next** when you are ready for the following part."
 
     def meditation_guide(self, args, sender):
-        if not args:
-            # Improved menu with duration information
-            options = [f"/meditate {key} - {value['duration']} minutes" for key, value in self.meditations.items()]
-            return "Choose your meditation duration:\n" + "\n".join(options)
+        if not args.strip():
+            options = [
+                f"/meditate {key} — {value['duration']} min ({len(self._meditation_script_keys(value))} parts)"
+                for key, value in self.meditations.items()
+            ]
+            return "Choose your meditation:\n" + "\n".join(options)
 
-        meditation_type = args.lower()
+        meditation_type = args.lower().split()[0]
         if meditation_type not in self.meditations:
-            return "Invalid meditation type. Choose from: quick, medium, long"
+            return "Invalid type. Use: /meditate quick | medium | long"
 
-        selected_meditation = self.meditations[meditation_type]
+        selected = self.meditations[meditation_type]
+        keys = self._meditation_script_keys(selected)
+        intro = selected["script"].get(keys[0], "Let's begin.")
 
-        # Log the meditation session (requires database setup as described in Step 4)
-        conn = sqlite3.connect('wellness.db')  # Assumes 'wellness.db' is set up
+        conn = sqlite3.connect("wellness.db")
         c = conn.cursor()
         try:
-            c.execute('''
-                INSERT INTO meditation_sessions (user_phone, duration, type, started_at)
-                VALUES (?, ?, ?, ?)''',
-                      (sender, selected_meditation['duration'], meditation_type, datetime.now()))
+            c.execute(
+                """INSERT OR REPLACE INTO active_meditations
+                   (user_phone, meditation_type, start_time, paused, step_index)
+                   VALUES (?, ?, NULL, 0, 0)""",
+                (sender, meditation_type),
+            )
+            c.execute(
+                """INSERT INTO meditation_sessions (user_phone, duration, type, started_at)
+                   VALUES (?, ?, ?, ?)""",
+                (sender, selected["duration"], meditation_type, datetime.now()),
+            )
             conn.commit()
-            logger.info(f"Meditation session started for {sender}: {meditation_type}")  # Log the event
         except sqlite3.Error as e:
-            logger.error(f"Database error logging meditation session: {e}")
-            conn.rollback()  # Rollback in case of error
+            logger.error("Database error logging meditation session: %s", e)
+            conn.rollback()
         finally:
             conn.close()
 
-        # Add to active meditations (in the WellnessBot class)
-        self.active_meditations[sender] = {
-            'type': meditation_type,
-            'start_time': None,
-            'current_interval': 0
-        }
-
-        # Return the first instruction
-        return selected_meditation['script']['0']
+        return (
+            f"{intro}\n\n"
+            f"*{selected['duration']}-minute session · {len(keys)} parts*\n"
+            "Type **ready** to begin, then **next** after each part.\n"
+            "**pause** · **resume** · **end** · **status**"
+        )
 
     def handle_meditation_progress(self, message, sender):
-        conn = sqlite3.connect('wellness.db')
+        conn = sqlite3.connect("wellness.db")
         cursor = conn.cursor()
 
         try:
-            cursor.execute("SELECT meditation_type, start_time, paused FROM active_meditations WHERE user_phone = ?",
-                           (sender,))
+            cursor.execute(
+                """SELECT meditation_type, start_time, paused, step_index
+                   FROM active_meditations WHERE user_phone = ?""",
+                (sender,),
+            )
             row = cursor.fetchone()
 
             if row is None:
                 return "You haven't started a meditation session yet. Use /meditate to begin."
 
-            meditation_type, start_time, paused = row
-
-            if message.lower() == 'ready':
-                meditation_data['start_time'] = datetime.now()
-                meditation_type = meditation_data['type']
-                meditation = self.meditations.get(meditation_type)  # Added error checking
-
-                if not meditation:
-                    del self.active_meditations[sender]  # Clean up if meditation type is invalid
-                    return f"Error: Meditation type '{meditation_type}' not found."
-
-                thread = threading.Thread(target=self._run_meditation_timer, args=(sender, meditation_type))
-                thread.daemon = True
-                thread.start()
-                return meditation['script'][0]  # Start the meditation
-
-
-            elif message.lower() == 'end':
-
+            meditation_type, start_time, paused, step_index = row
+            step_index = step_index or 0
+            meditation = self.meditations.get(meditation_type)
+            if not meditation:
                 cursor.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+                conn.commit()
+                return f"Error: Meditation type '{meditation_type}' not found."
 
+            keys = self._meditation_script_keys(meditation)
+            script = meditation.get("script", {})
+            msg = message.lower().strip()
+
+            if msg == "status":
+                return (
+                    f"Session: {meditation_type} ({meditation['duration']} min)\n"
+                    f"Part {step_index + 1} of {len(keys)}"
+                    + (" · paused" if paused else "")
+                )
+
+            if msg == "end":
+                cursor.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+                conn.commit()
+                return "Meditation ended. Thank you. Type /mood to log how you feel."
+
+            if msg == "pause":
+                cursor.execute(
+                    "UPDATE active_meditations SET paused = 1 WHERE user_phone = ?", (sender,)
+                )
+                conn.commit()
+                return "Paused. Type **resume** or **end**."
+
+            if msg == "resume":
+                cursor.execute(
+                    "UPDATE active_meditations SET paused = 0 WHERE user_phone = ?", (sender,)
+                )
+                conn.commit()
+                return "Resumed. Type **next** to continue."
+
+            if paused:
+                return "Session is paused. Type **resume** or **end**."
+
+            if msg in ("ready", "next"):
+                if msg == "ready" and step_index > 0:
+                    return "Session already started. Type **next** for the next part."
+
+                new_step = 1 if msg == "ready" else step_index + 1
+                if new_step >= len(keys):
+                    cursor.execute(
+                        "DELETE FROM active_meditations WHERE user_phone = ?", (sender,)
+                    )
+                    conn.commit()
+                    return (
+                        script.get(keys[-1], "Well done.")
+                        + "\n\nSession complete. Type /mood to log how you feel."
+                    )
+
+                if msg == "ready" and not start_time:
+                    cursor.execute(
+                        "UPDATE active_meditations SET start_time = ?, step_index = ? "
+                        "WHERE user_phone = ?",
+                        (datetime.now(), new_step, sender),
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE active_meditations SET step_index = ? WHERE user_phone = ?",
+                        (new_step, sender),
+                    )
                 conn.commit()
 
-                self._log_meditation_session(sender, meditation_type)  # Assuming you have this function
+                body = script.get(keys[new_step], "Continue at your own pace.")
+                hint = self._meditation_pacing_hint(meditation, new_step, keys)
+                return f"{body}{hint}"
 
-                return "Meditation session ended. Thank you."
-
-
-            elif message.lower() == 'pause':
-
-                cursor.execute("UPDATE active_meditations SET paused = 1 WHERE user_phone = ?", (sender,))
-
-                conn.commit()
-
-                return "Meditation paused. Type 'resume' to continue."
-
-
-            elif message.lower() == 'resume':
-
-                cursor.execute("UPDATE active_meditations SET paused = 0 WHERE user_phone = ?", (sender,))
-
-                conn.commit()
-
-                return "Meditation resumed."
-
-            return "Type 'ready' to start, 'pause' to pause, 'resume' to resume, or 'end' to stop the meditation."
+            return (
+                "During meditation: **ready** (start) · **next** (next part) · "
+                "**pause** · **resume** · **end** · **status**"
+            )
         except sqlite3.Error as e:
-            logger.error(f"Database error in handle_meditation_progress: {e}")
+            logger.error("Database error in handle_meditation_progress: %s", e)
             return "An error occurred. Please try again later."
         finally:
             conn.close()
 
-    def _run_meditation_timer(self, sender, meditation_type):
-        conn = sqlite3.connect('wellness.db')
-        cursor = conn.cursor()
-
-        try:
-            meditation = self.meditations.get(meditation_type)
-            if not meditation:
-                logger.error(f"Meditation type '{meditation_type}' not found.")
-                return
-
-            intervals = meditation['intervals']
-
-            while True:
-                cursor.execute("SELECT start_time, paused FROM active_meditations WHERE user_phone = ?", (sender,))
-                row = cursor.fetchone()
-                if row is None:
-                    break  # Meditation session ended
-
-                start_time, paused = row
-
-                if paused == 1:
-                    time.sleep(60)  # Check every minute if paused
-                    continue
-
-                for i, interval in enumerate(intervals):
-                    if i == 0:
-                        continue
-
-                    wait_time = interval * 60
-                    time.sleep(wait_time)
-
-                    cursor.execute("SELECT paused FROM active_meditations WHERE user_phone = ?", (sender,))
-                    row = cursor.fetchone()
-                    if row is None or row[0] == 1:
-                        break  # Meditation ended or paused
-
-                    message = meditation['script'].get(str(i))
-                    if message:
-                        self._send_twilio_message(sender, message)
-                    else:
-                        logger.error(f"Missing script for meditation '{meditation_type}', interval {i}")
-                    conn.commit()
-
-                break  # Exit loop after all intervals
-
-        except sqlite3.Error as e:
-            logger.error(f"Database error in _run_meditation_timer: {e}")
-        finally:
-            conn.close()
-
     def daily_affirmation(self, args, sender):
-        return random.choice(self.affirmations)
+        if self.affirmations:
+            return random.choice(self.affirmations)
+        else:
+            return "Sorry, no affirmations available right now."
+
+    def start_checkin_command(self, args, sender):
+        from checkin_flow import start_checkin
+
+        return start_checkin(sender)
 
     def help_command(self, args, sender):
         return """Mental Wellness Buddy Commands:
 /start - Begin your wellness journey
-/mood [1-10] [notes] - Log your current mood
-/breathe - Start a breathing exercise
-/meditate - Begin a meditation session
-/affirmation - Get a daily affirmation
-/vent - Share your thoughts and feelings
-/analyze - View your mood patterns
-/help - See all available commands"""
+/checkin - Guided wellness check-in (mood + topic)
+/mood [1-10] [note] - Log mood (optional note)
+/breathe [calm|relaxation|energize] - Breathing exercise
+/meditate [quick|medium|long] - Guided meditation (ready → next → end)
+/affirmation - Random affirmation
+/vent - Share thoughts; replies use sentiment + suggested commands
+/analyze - 7-day mood summary
+/cancel - Cancel current flow
+/help - This list"""
 
     def vent_session(self, args, sender):
-        return self.vent_instructions['intro']
+        from vent_flow import start_vent
+
+        return start_vent(sender)
 
     def mood_analysis(self, args, sender):
         conn = sqlite3.connect('wellness.db')
@@ -324,7 +381,7 @@ class WellnessBot:
                 "Keep tracking your moods to see patterns and growth! 📊")
 
     def is_admin(self, phone_number):
-        return phone_number in self.admin_numbers
+        return _digits_only(phone_number) in self.admin_numbers
 
     def check_limit_command(self, args, sender):
         if not self.is_admin(sender):
@@ -341,6 +398,8 @@ class WellnessBot:
 
 
     def check_twilio_daily_limit(self):
+        if not self.client:
+            return {"status": "error", "message": "Twilio is not configured (Cloud API mode)."}
         try:
             usage_records = self.client.usage.records.daily.list(limit=10)
             message_usage = [record for record in usage_records if record.category == 'sms']
@@ -360,7 +419,11 @@ class WellnessBot:
             return {"status": "error", "message": "Failed to retrieve Twilio usage data."}
 
     def get_command_and_args(self, message):
-        parts = message.strip().split(' ', 1)
+        """Return (command, args) only for messages that start with /."""
+        stripped = message.strip()
+        if not stripped.startswith("/"):
+            return "", ""
+        parts = stripped.split(" ", 1)
         command = parts[0].lower()
-        args = parts[1] if len(parts) > 1 else ''
+        args = parts[1] if len(parts) > 1 else ""
         return command, args

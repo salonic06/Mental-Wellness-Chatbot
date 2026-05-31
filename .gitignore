@@ -1,6 +1,10 @@
 .env
+.env.local
 *.log
+config.local.json
 __pycache__/
 .idea/
 *.pyc
 wellness.db
+models/
+reports/

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+twilio
+streamlit
+pandas
+plotly
+scikit-learn
+joblib
+vaderSentiment
