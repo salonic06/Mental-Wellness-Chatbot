@@ -41,7 +41,8 @@ Repo must be on GitHub (already synced).
 | `ENABLE_SCHEDULED_BACKUP` | No | `true` (default in blueprint) |
 | `ENABLE_MEDITATION_NUDGES` | No | `true` |
 | `ENABLE_DAILY_CHECKIN_NUDGES` | No | `true` on Render blueprint |
-| `DAILY_NUDGE_HOUR` | No | `9` (local hour in `TIMEZONE`) |
+| `DAILY_NUDGE_HOUR` | No | `9` (send window starts at this hour in `TIMEZONE`) |
+| `DAILY_NUDGE_WINDOW_MINUTES` | No | `30` (only sends in the first N minutes of that hour, e.g. 9:00–9:29 IST) |
 
 Do **not** upload `.env` to git.
 
@@ -118,7 +119,8 @@ streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server
 | 401 on send | Refresh or replace `WHATSAPP_ACCESS_TOKEN` — see long-lived token doc |
 | Slow first message | Free tier waking up — retry after 30s |
 | Empty dashboard on Render | Bot DB is separate unless you use `render.full.yaml` |
-| Daily reminder not sent | User must `/remind on`; `ENABLE_DAILY_CHECKIN_NUDGES=true`; service awake after `DAILY_NUDGE_HOUR` |
+| Daily reminder not sent | User must `/remind on`; nudges on; Render awake during **9:00–9:29** (if hour=9, window=30) |
+| Nudge at night | Old logic sent any time after 9:00; fixed to morning window only — redeploy latest code |
 
 ---
 
@@ -191,7 +193,7 @@ Requires the web service to stay running. Free-tier sleep may delay nudges.
 When `ENABLE_DAILY_CHECKIN_NUDGES=true`:
 
 1. User sends **`/remind on`** (opt-in).
-2. Once per local day after `DAILY_NUDGE_HOUR` in `TIMEZONE`, bot may send a gentle check-in prompt.
+2. Once per local day in the morning window (`DAILY_NUDGE_HOUR` + first `DAILY_NUDGE_WINDOW_MINUTES`, default **9:00–9:29** in `TIMEZONE`).
 3. **`/remind off`** to stop; **`/remind`** for status.
 
 Disable globally: `ENABLE_DAILY_CHECKIN_NUDGES=false`.

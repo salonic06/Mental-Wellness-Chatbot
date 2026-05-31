@@ -52,6 +52,21 @@ def _nudge_hour() -> int:
         return 9
 
 
+def _nudge_window_minutes() -> int:
+    """How many minutes after the hour start we may send (default 9:00–9:29)."""
+    try:
+        return max(5, min(59, int(os.environ.get("DAILY_NUDGE_WINDOW_MINUTES", "30"))))
+    except ValueError:
+        return 30
+
+
+def should_send_nudge_now(now: datetime) -> bool:
+    """Send only in the configured morning window, not all day after that hour."""
+    if now.hour != _nudge_hour():
+        return False
+    return now.minute < _nudge_window_minutes()
+
+
 def set_daily_reminder(user_phone: str, enabled: bool) -> None:
     conn = connect()
     try:
@@ -145,7 +160,7 @@ def run_daily_nudge_tick() -> int:
     """Send reminders to eligible users; return count sent."""
     tz = _timezone()
     now = datetime.now(tz)
-    if now.hour < _nudge_hour():
+    if not should_send_nudge_now(now):
         return 0
 
     local_today = now.date().isoformat()
@@ -176,8 +191,10 @@ def start_daily_nudge_scheduler() -> None:
         return
     threading.Thread(target=_scheduler_loop, daemon=True, name="daily-checkin-nudges").start()
     logger.info(
-        "Daily check-in nudges enabled (hour>=%s %s, poll=%ss)",
+        "Daily check-in nudges enabled (%s:00–%s:%02d %s, poll=%ss)",
         _nudge_hour(),
+        _nudge_hour(),
+        _nudge_window_minutes() - 1,
         _timezone(),
         os.environ.get("DAILY_NUDGE_POLL_SECONDS", "900"),
     )

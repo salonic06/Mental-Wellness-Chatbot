@@ -437,9 +437,19 @@ Admins: /stats · /ping · /invite"""
         )
 
     def remind_command(self, args, sender):
-        from checkin_nudge_scheduler import get_reminder_status, nudges_enabled, set_daily_reminder
+        from checkin_nudge_scheduler import (
+            _nudge_hour,
+            _nudge_window_minutes,
+            get_reminder_status,
+            nudges_enabled,
+            set_daily_reminder,
+        )
 
         sub = (args or "").strip().lower()
+        tz_name = os.environ.get("TIMEZONE", "UTC")
+        hour = _nudge_hour()
+        window = _nudge_window_minutes()
+
         if sub in ("on", "enable", "yes"):
             set_daily_reminder(sender, True)
             if not nudges_enabled():
@@ -447,19 +457,24 @@ Admins: /stats · /ping · /invite"""
                     "Reminder saved. Note: server has ENABLE_DAILY_CHECKIN_NUDGES=false, "
                     "so pushes will not run until your host enables it."
                 )
-            hour = os.environ.get("DAILY_NUDGE_HOUR", "9")
-            tz = os.environ.get("TIMEZONE", "UTC")
             return (
-                f"Daily check-in reminder is ON (about {hour}:00 {tz}).\n"
-                "Reply /remind off to stop."
+                f"Daily reminder is **ON**.\n"
+                f"You'll get one message every morning around **{hour}:00** "
+                f"({hour}:00–{hour}:{window - 1:02d} {tz_name}) until you send **/remind off**.\n"
+                "First nudge: next time that window comes (not in the evening)."
             )
         if sub in ("off", "disable", "no"):
             set_daily_reminder(sender, False)
-            return "Daily check-in reminder is OFF."
+            return "Daily reminder is **OFF**. You won't get morning nudges anymore."
         status = get_reminder_status(sender)
         state = "ON" if status["enabled"] else "OFF"
         last = status["last_sent_date"] or "never"
-        return f"Daily reminder: {state}. Last sent: {last}. Use /remind on or /remind off."
+        if status["enabled"]:
+            return (
+                f"Daily reminder: **{state}** (every ~{hour}:00 {tz_name} until /remind off).\n"
+                f"Last sent: {last}."
+            )
+        return f"Daily reminder: **{state}**. Last sent: {last}. Send **/remind on** to start."
 
     def get_command_and_args(self, message):
         """Return (command, args) only for messages that start with /."""
