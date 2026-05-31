@@ -130,3 +130,15 @@ This project is scoped as a **development / friends demo**, not public productio
 - Serving unknown users who are not on the tester list.
 
 See roadmap: **long-lived token** and **production access** are planned for later if you outgrow the tester list.
+
+## Timed meditation nudges
+
+When `ENABLE_MEDITATION_NUDGES=true` (default in `render.yaml`):
+
+1. User starts `/meditate quick` (or medium/long) and types **ready**.
+2. The bot sends part 2 immediately, then **automatic WhatsApp messages** for later parts using gaps from `meditations.json` (e.g. ~1 min for quick).
+3. Typing **next**, **pause**, or **end** cancels pending nudges.
+
+Requires the **web service to stay running** (Render). Free tier sleep may delay the first nudge until the app wakes again.
+
+Disable on Render: set `ENABLE_MEDITATION_NUDGES=false`.

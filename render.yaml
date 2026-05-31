@@ -17,3 +17,5 @@ services:
         value: "true"
       - key: BACKUP_KEEP
         value: "7"
+      - key: ENABLE_MEDITATION_NUDGES
+        value: "true"

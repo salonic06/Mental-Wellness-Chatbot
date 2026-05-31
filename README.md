@@ -175,7 +175,7 @@ Slash commands still work.
 1. ~~Deploy to Render~~ → [DEPLOY.md](DEPLOY.md)  
 2. ~~Interactive buttons / lists~~  
 3. **Long-lived WhatsApp token** (less manual refresh on Render)  
-4. Timed meditation pushes (server-scheduled nudges)  
+4. ~~Timed meditation pushes~~ (after **ready** on Render)  
 5. **React dashboard** consuming `/api/*`  
 6. Optional constrained **GenAI** summaries (safety-reviewed)  
 7. **Friends demo guide** → [DEPLOY.md#friends-demo-development-only](DEPLOY.md) (tester list; not public production)  

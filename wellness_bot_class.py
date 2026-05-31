@@ -232,7 +232,8 @@ class WellnessBot:
         return (
             f"{intro}\n\n"
             f"*{selected['duration']}-minute session · {len(keys)} parts*\n"
-            "Type **ready** to begin, then **next** after each part.\n"
+            "Type **ready** to begin — timed prompts will follow each part.\n"
+            "Or type **next** yourself anytime.\n"
             "**pause** · **resume** · **end** · **status**"
         )
 

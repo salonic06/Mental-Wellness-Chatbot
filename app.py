@@ -16,6 +16,7 @@ from api_routes import router as api_router
 from bot_router import process_message
 from database import init_db
 from interactive_maps import resolve_inbound_text
+from meditation_scheduler import on_meditation_user_message
 from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_message, verify_meta_signature
 
 _BASE_DIR = Path(__file__).resolve().parent
@@ -126,6 +127,7 @@ async def webhook_receive(
 
         reply = process_message(sender, raw)
         await api.send_reply(to=sender, reply=reply)
+        await on_meditation_user_message(sender, resolve_inbound_text(raw).strip().lower())
         return {"status": "ok"}
     except Exception as exc:
         logger.exception("Webhook handler failed while processing message: %s", exc)
