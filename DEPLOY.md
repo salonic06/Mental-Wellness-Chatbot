@@ -98,3 +98,35 @@ New **Web Service**, same repo:
 | 401 on send | Refresh `WHATSAPP_ACCESS_TOKEN` |
 | Slow first message | Free tier waking up — retry after 30s |
 | Empty dashboard locally | Render DB is separate; copy backup or re-seed demo data |
+
+---
+
+## Friends demo (development only)
+
+This project is scoped as a **development / friends demo**, not public production.
+
+### Add a friend as a tester
+
+1. [Meta for Developers](https://developers.facebook.com/) → your app → **WhatsApp** → **API Setup** (or **Configuration**).
+2. Under **To** / **Phone numbers** → **Manage phone number list** → **Add phone number**.
+3. Enter their full international number (e.g. `91XXXXXXXXXX`).
+4. They complete the verification code in WhatsApp.
+5. They message your **test business number** (shown in API Setup, e.g. `+1 555 …`).
+
+### What friends should do
+
+- Send `/start` → tap **Open menu** for buttons/lists.
+- Or use slash commands (`/checkin`, `/vent`, `/help`) as before.
+
+### What you maintain
+
+- Render service stays **live** (free tier may sleep — first reply can be slow).
+- Refresh **WHATSAPP_ACCESS_TOKEN** in Render when Meta returns 401 (~24h tokens).
+- Optional: share `https://wa.me/PHONE_NUMBER` link (digits only, no `+`) after they are added as testers.
+
+### Not in scope for this demo
+
+- Public launch without Meta **production** approval and Business Verification.
+- Serving unknown users who are not on the tester list.
+
+See roadmap: **long-lived token** and **production access** are planned for later if you outgrow the tester list.

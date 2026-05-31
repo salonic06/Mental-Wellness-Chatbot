@@ -134,6 +134,8 @@ app.py                 # FastAPI webhook + API router
 api_routes.py          # Read-only /api metrics
 whatsapp_cloud.py      # Send + signature verify
 bot_router.py          # State machine + command dispatch
+interactive_maps.py    # Button/list IDs → commands
+bot_reply.py           # Text + optional interactive outbound
 vent_flow.py           # Multi-turn /vent
 sentiment_nlp.py       # VADER + crisis (single NLP module)
 checkin_flow.py        # Guided /checkin
@@ -157,10 +159,23 @@ Step-by-step: **[DEPLOY.md](DEPLOY.md)**
 py scripts/backup_db.py   # manual backup anytime
 ```
 
+## Interactive UI (WhatsApp)
+
+Tap **Open menu** after `/start` for a list of actions. Buttons also appear for:
+
+- Meditation length (quick / medium / long)
+- Breathing patterns (calm / relaxation / energize)
+- Check-in topic (list)
+- After vent replies (done / affirmation / breathe)
+
+Slash commands still work.
+
 ## Roadmap
 
-1. ~~Deploy to Render~~ → see [DEPLOY.md](DEPLOY.md)  
-2. Long-lived WhatsApp token + interactive **buttons**  
-3. Timed meditation pushes (reliable on always-on Render)  
-4. **React dashboard** consuming `/api/*`  
-5. Optional constrained **GenAI** summaries (safety-reviewed)  
+1. ~~Deploy to Render~~ → [DEPLOY.md](DEPLOY.md)  
+2. ~~Interactive buttons / lists~~  
+3. **Long-lived WhatsApp token** (less manual refresh on Render)  
+4. Timed meditation pushes (server-scheduled nudges)  
+5. **React dashboard** consuming `/api/*`  
+6. Optional constrained **GenAI** summaries (safety-reviewed)  
+7. **Friends demo guide** → [DEPLOY.md#friends-demo-development-only](DEPLOY.md) (tester list; not public production)  

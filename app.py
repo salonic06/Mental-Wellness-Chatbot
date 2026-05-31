@@ -15,7 +15,8 @@ from fastapi.responses import PlainTextResponse
 from api_routes import router as api_router
 from bot_router import process_message
 from database import init_db
-from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_text_message, verify_meta_signature
+from interactive_maps import resolve_inbound_text
+from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_message, verify_meta_signature
 
 _BASE_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _BASE_DIR / ".env"
@@ -105,21 +106,26 @@ async def webhook_receive(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    inbound = extract_inbound_text_message(payload)
+    inbound = extract_inbound_message(payload)
     if not inbound or not inbound.get("from"):
         return {"status": "ignored"}
 
     sender = _normalize_wa_id(inbound["from"])
-    text = (inbound.get("text") or "").strip()
-    logger.info("Inbound message received (sender_hash=%s)", hash(sender))
+    raw = (inbound.get("text") or "").strip()
+    text = resolve_inbound_text(raw)
+    logger.info(
+        "Inbound message (sender_hash=%s, interactive=%s)",
+        hash(sender),
+        inbound.get("interactive", "no"),
+    )
 
     try:
         access_token = _required_env("WHATSAPP_ACCESS_TOKEN")
         phone_number_id = _required_env("WHATSAPP_PHONE_NUMBER_ID")
         api = WhatsAppCloudAPI(access_token=access_token, phone_number_id=phone_number_id)
 
-        reply = process_message(sender, text)
-        await api.send_text(to=sender, text=reply)
+        reply = process_message(sender, raw)
+        await api.send_reply(to=sender, reply=reply)
         return {"status": "ok"}
     except Exception as exc:
         logger.exception("Webhook handler failed while processing message: %s", exc)
