@@ -8,6 +8,8 @@
   "/help": "help_command",
   "/vent": "vent_session",
   "/analyze": "mood_analysis",
-  "/checklimit": "check_limit_command",
-  "/checkusage": "check_usage_command"
+  "/stats": "admin_stats_command",
+  "/ping": "admin_ping_command",
+  "/invite": "admin_invite_command",
+  "/remind": "remind_command"
 }

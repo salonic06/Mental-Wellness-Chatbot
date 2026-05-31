@@ -19,3 +19,9 @@ services:
         value: "7"
       - key: ENABLE_MEDITATION_NUDGES
         value: "true"
+      - key: ENABLE_DAILY_CHECKIN_NUDGES
+        value: "true"
+      - key: DAILY_NUDGE_HOUR
+        value: "9"
+      - key: TIMEZONE
+        value: "Asia/Kolkata"

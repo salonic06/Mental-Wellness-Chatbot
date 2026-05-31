@@ -209,8 +209,8 @@ def main() -> None:
             - **Crisis logging**: `vent_logs` + placeholder rows in mood/check-in tabs (`[crisis]` only — no message text)
 
             ### Planned upgrades
-            - **React** web dashboard (full-stack) reading from a proper API
-            - WhatsApp interactive buttons and optional GenAI (constrained, safety-first)
+            - **React** web dashboard consuming `/api/*`
+            - Optional constrained GenAI summaries (safety-reviewed)
             """
         )
 

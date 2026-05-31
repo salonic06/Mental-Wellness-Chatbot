@@ -53,5 +53,10 @@ def init_db(db_path=None) -> None:
         )
     except sqlite3.OperationalError:
         pass
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS daily_reminders
+           (user_phone TEXT PRIMARY KEY, enabled INTEGER DEFAULT 0,
+            last_sent_date TEXT)"""
+    )
     conn.commit()
     conn.close()

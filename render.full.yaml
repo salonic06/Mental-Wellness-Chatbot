@@ -1,5 +1,5 @@
-# Optional: 1 GB persistent disk (~$0.25/mo) shared by app + nightly cron.
-# Use when you want backups and DB to survive redeploys.
+# Bot + Streamlit dashboard sharing one persistent disk (Starter + ~$0.25/mo disk).
+# Use this when friends use the bot on Render and you want the dashboard online with real data.
 
 services:
   - type: web
@@ -16,6 +16,8 @@ services:
         value: /data/wellness.db
       - key: BACKUP_DIR
         value: /data/backups
+      - key: ENABLE_SCHEDULED_BACKUP
+        value: "true"
       - key: ENABLE_MEDITATION_NUDGES
         value: "true"
       - key: ENABLE_DAILY_CHECKIN_NUDGES
@@ -24,6 +26,22 @@ services:
         value: "9"
       - key: TIMEZONE
         value: "Asia/Kolkata"
+    disk:
+      name: wellness-data
+      mountPath: /data
+      sizeGB: 1
+
+  - type: web
+    name: mental-wellness-dashboard
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_PATH
+        value: /data/wellness.db
     disk:
       name: wellness-data
       mountPath: /data

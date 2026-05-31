@@ -1,0 +1,17 @@
+# Streamlit dashboard as a second Render web service.
+# For live data, use render.full.yaml (shared disk) or set DATABASE_PATH to the same disk mount.
+
+services:
+  - type: web
+    name: mental-wellness-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Point at the same DB as the bot when using render.full.yaml / persistent disk:
+      # - key: DATABASE_PATH
+      #   value: /data/wellness.db

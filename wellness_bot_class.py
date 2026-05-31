@@ -25,17 +25,6 @@ class WellnessBot:
             for n in os.environ.get("ADMIN_NUMBERS", "").split(",")
             if n.strip()
         ]
-        self.client = None
-        self.twilio_account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-        self.twilio_auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-        self.twilio_phone_number = os.environ.get("TWILIO_PHONE_NUMBER")
-        if all([self.twilio_account_sid, self.twilio_auth_token, self.twilio_phone_number]):
-            try:
-                from twilio.rest import Client
-
-                self.client = Client(self.twilio_account_sid, self.twilio_auth_token)
-            except Exception as e:
-                logger.warning("Twilio client not available: %s", e)
 
         self._load_json_data()
         if not self.affirmations:
@@ -77,6 +66,7 @@ class WellnessBot:
                 "- Start a meditation session with /meditate\n"
                 "- Share your feelings with /vent\n"
                 "- Do a guided check-in with /checkin\n"
+                "- Opt into a daily check-in reminder with /remind on\n"
                 "Type /help anytime to see all commands.")
 
     def _add_user_to_db(self, phone_number):
@@ -376,8 +366,11 @@ class WellnessBot:
 /affirmation - Random affirmation
 /vent - Share thoughts; replies use sentiment + suggested commands
 /analyze - 7-day mood summary
+/remind on|off|status - Daily check-in reminder (optional)
 /cancel - Cancel current flow
-/help - This list"""
+/help - This list
+
+Admins: /stats · /ping · /invite"""
 
     def vent_session(self, args, sender):
         from vent_flow import start_vent
@@ -406,40 +399,67 @@ class WellnessBot:
     def is_admin(self, phone_number):
         return _digits_only(phone_number) in self.admin_numbers
 
-    def check_limit_command(self, args, sender):
+    def admin_stats_command(self, args, sender):
         if not self.is_admin(sender):
-            return "Access denied. This command is for admins only."
-        # Add your Twilio message limit check logic here.
-        return "Twilio message limit check results."
+            return "Access denied. Admin only."
+        from admin_stats import fetch_bot_stats, format_stats_message
 
-    def check_usage_command(self, args, sender):
+        return format_stats_message(fetch_bot_stats())
+
+    def admin_ping_command(self, args, sender):
         if not self.is_admin(sender):
-            return "Access denied. This command is for admins only."
+            return "Access denied. Admin only."
+        from admin_stats import format_ping_message
 
-        result = self.check_twilio_daily_limit()
-        return result["message"]
+        return format_ping_message()
 
+    def admin_invite_command(self, args, sender):
+        if not self.is_admin(sender):
+            return "Access denied. Admin only."
+        display = (os.environ.get("WHATSAPP_DISPLAY_NUMBER") or "").strip()
+        if not display:
+            return (
+                "Set WHATSAPP_DISPLAY_NUMBER in Render (digits only, country code, no +).\n"
+                "Example: 15551234567 for a US test number.\n"
+                "Find it in Meta → WhatsApp → API Setup (business phone)."
+            )
+        from wa_me import build_wa_me_link
 
-    def check_twilio_daily_limit(self):
-        if not self.client:
-            return {"status": "error", "message": "Twilio is not configured (Cloud API mode)."}
-        try:
-            usage_records = self.client.usage.records.daily.list(limit=10)
-            message_usage = [record for record in usage_records if record.category == 'sms']
+        link = build_wa_me_link(display, "Hi")
+        return (
+            "*Share this link* (friend must be added as Meta tester first):\n"
+            f"{link}\n\n"
+            "Steps:\n"
+            "1. Meta Developer → WhatsApp → add their phone to tester list\n"
+            "2. They open the link and tap Send\n"
+            "3. They type /start\n\n"
+            "See DEPLOY.md → Friends demo."
+        )
 
-            if not message_usage:
-                return {"status": "success", "message": "No SMS usage recorded today."}
+    def remind_command(self, args, sender):
+        from checkin_nudge_scheduler import get_reminder_status, nudges_enabled, set_daily_reminder
 
-            usage_summary = []
-            for record in message_usage:
-                usage_summary.append(f"{record.description}: {record.usage} {record.usage_unit}")
-
-            summary = "\n".join(usage_summary)
-            return {"status": "success", "message": f"Today's usage:\n{summary}"}
-
-        except Exception as e:
-            logger.error(f"Error fetching usage data: {str(e)}")
-            return {"status": "error", "message": "Failed to retrieve Twilio usage data."}
+        sub = (args or "").strip().lower()
+        if sub in ("on", "enable", "yes"):
+            set_daily_reminder(sender, True)
+            if not nudges_enabled():
+                return (
+                    "Reminder saved. Note: server has ENABLE_DAILY_CHECKIN_NUDGES=false, "
+                    "so pushes will not run until your host enables it."
+                )
+            hour = os.environ.get("DAILY_NUDGE_HOUR", "9")
+            tz = os.environ.get("TIMEZONE", "UTC")
+            return (
+                f"Daily check-in reminder is ON (about {hour}:00 {tz}).\n"
+                "Reply /remind off to stop."
+            )
+        if sub in ("off", "disable", "no"):
+            set_daily_reminder(sender, False)
+            return "Daily check-in reminder is OFF."
+        status = get_reminder_status(sender)
+        state = "ON" if status["enabled"] else "OFF"
+        last = status["last_sent_date"] or "never"
+        return f"Daily reminder: {state}. Last sent: {last}. Use /remind on or /remind off."
 
     def get_command_and_args(self, message):
         """Return (command, args) only for messages that start with /."""

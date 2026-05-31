@@ -1,6 +1,6 @@
 # Mental Wellness Chatbot
 
-WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite**, **VADER** vent sentiment, **ML** check-in recommender, and a **Streamlit** dashboard.
+WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite**, **VADER** vent sentiment, **ML** check-in recommender, **timed meditation nudges**, optional **daily check-in reminders**, and a **Streamlit** dashboard.
 
 ## Architecture
 
@@ -24,39 +24,32 @@ GET /api/* (api_routes.py)  ──reads──►  wellness.db   # for future Rea
 | API / webhooks | **FastAPI** + **Uvicorn** |
 | WhatsApp | **Meta WhatsApp Cloud API** |
 | Vent mood NLP | **VADER** (`vaderSentiment`) + wellness lexicon tie-break |
-| Crisis safety | Phrase list → `vent_logs` + `[crisis]` placeholders in mood/check-in tables |
+| Crisis safety | Phrase list → `vent_logs` + `[crisis]` placeholders |
 | Check-in ML | **Logistic regression** (scikit-learn) on intensity + category + hour |
+| Timed meditation | `meditation_scheduler.py` (asyncio, after **ready**) |
+| Daily reminders | `checkin_nudge_scheduler.py` (opt-in `/remind on`) |
 | Storage | **SQLite** (`wellness.db`) |
-| Dashboard | **Streamlit** |
-| Legacy (unused) | Flask + Twilio (`mental_wellness.py`) |
+| Dashboard | **Streamlit** (local or Render via `render.full.yaml`) |
+| CI | GitHub Actions + **pytest** |
 
 ## Security & secrets
 
 - **Never commit** `.env` or real API keys (see `.env.example`).
-- `config.json` in the repo contains **non-secret** defaults only (`timezone`). Use `config.example.json` as a template for optional legacy keys.
 - Webhook: verify `META_APP_SECRET` signature when set.
 - Logs: inbound sender is logged as `hash(phone)` only.
-- `/api/*` endpoints are **read-only** and unauthenticated — fine for local demo; add auth before any public deploy.
+- `/api/*` is read-only and unauthenticated — add auth before any public dashboard URL.
 
 ## Local setup
 
 ### 1) Environment
 
-Copy `.env.example` → `.env` and fill in:
-
-```env
-WHATSAPP_ACCESS_TOKEN=...
-WHATSAPP_PHONE_NUMBER_ID=...
-META_VERIFY_TOKEN=wellness-bot-dev-123
-META_APP_SECRET=...
-TIMEZONE=Asia/Kolkata
-ADMIN_NUMBERS=          # optional, comma-separated E.164
-```
+Copy `.env.example` → `.env` and fill in Meta credentials. See [docs/LONG_LIVED_TOKEN.md](docs/LONG_LIVED_TOKEN.md) for a stable Render token.
 
 ### 2) Install
 
 ```bash
 py -m pip install -r requirements.txt
+py -m pip install -r requirements-dev.txt   # tests
 ```
 
 ### 3) Run the bot
@@ -65,7 +58,7 @@ py -m pip install -r requirements.txt
 py -m uvicorn app:app --port 8000
 ```
 
-Expose with **ngrok** and set Meta webhook to `https://YOUR-URL/webhook` (include `/webhook`).
+Expose with **ngrok** and set Meta webhook to `https://YOUR-URL/webhook`.
 
 ### 4) Dashboard
 
@@ -73,109 +66,97 @@ Expose with **ngrok** and set Meta webhook to `https://YOUR-URL/webhook` (includ
 py -m streamlit run dashboard.py
 ```
 
-### 5) REST API (optional)
+### 5) Tests
 
-With the server running:
-
-- `GET /health` — liveness
-- `GET /api/health` — API + DB presence
-- `GET /api/metrics/summary` — counts for dashboard/React
-- `GET /api/mood-logs?limit=50`
-- `GET /api/checkins?limit=50`
-- `GET /api/vent-logs?limit=50`
+```bash
+py -m pytest -q
+```
 
 ## WhatsApp commands
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Welcome + register user |
+| `/start` | Welcome + register user + menu |
 | `/checkin` | Multi-step check-in → ML/rules suggestion |
-| `/mood 7 note` | Log mood; crisis phrases in note trigger safety flow |
-| `/breathe` | List patterns; `/breathe calm` etc. for timings |
-| `/meditate` | List durations; `/meditate quick` → stepwise session |
+| `/mood 7 note` | Log mood; crisis phrases trigger safety flow |
+| `/breathe` | Breathing patterns (buttons or `/breathe calm`) |
+| `/meditate` | quick / medium / long → **ready** → timed parts |
 | `/affirmation` | Random affirmation |
-| `/vent` | Multi-turn vent; VADER sentiment; slash commands allowed |
+| `/vent` | Multi-turn vent; VADER sentiment |
 | `/analyze` | 7-day mood average |
+| `/remind on\|off` | Opt in/out of daily check-in nudge |
 | `/cancel` | Exit current flow |
 | `/help` | Command list |
 
+**Admins** (`ADMIN_NUMBERS`): `/stats`, `/ping`, `/invite` (wa.me link)
+
 ### Meditation flow
 
-1. `/meditate quick` (or medium / long) — intro (part 1 of N)
-2. `ready` — begin timed **parts** (user-paced; type `next` between segments)
-3. `next` — next script segment (~minute gaps suggested from `meditations.json`)
-4. `pause` / `resume` / `status` / `end`
+1. `/meditate quick` — intro  
+2. **ready** — part 1 + auto parts at **+1** and **+2 min** (quick)  
+3. **pause** / **resume** / **next** / **end**
 
-WhatsApp cannot push mid-session timers reliably on a laptop demo without a always-on worker; pacing is **user-driven** with suggested minute gaps (honest for interviews).
+Requires an always-on host (e.g. Render) with `ENABLE_MEDITATION_NUDGES=true`.
 
 ### Vent flow
 
-1. `/vent` — listen mode
-2. Free text — VADER → bucket reply + `(Detected tone: …)`
-3. Optional `/breathe`, `/mood`, `/affirmation`, `/meditate` during vent
-4. `/done` or `/cancel` to exit
+1. `/vent` → share text → VADER reply + `(Detected tone: …)`  
+2. `/done` or buttons to exit  
+
+## Invite a friend (development demo)
+
+1. Add their phone in Meta → WhatsApp → **tester list**.  
+2. Set `WHATSAPP_DISPLAY_NUMBER` (digits only) on Render.  
+3. Send **`/invite`** as admin, or share `https://wa.me/NUMBER?text=Hi`.  
+4. They message the bot and type **`/start`**.
+
+Details: **[DEPLOY.md § Show the chatbot to a new person](DEPLOY.md#show-the-chatbot-to-a-new-person)**
 
 ## ML recommender
 
-- Rules baseline after every `/checkin`
-- Trains when **12+** check-ins exist
-
 ```bash
 py scripts/evaluate_recommender.py
-py scripts/seed_demo_data.py    # optional demo users 9199000000XX
+py scripts/seed_demo_data.py
 ```
-
-Report: `reports/recommender_evaluation.md`
 
 ## Project layout
 
 ```
-app.py                 # FastAPI webhook + API router
-api_routes.py          # Read-only /api metrics
-whatsapp_cloud.py      # Send + signature verify
-bot_router.py          # State machine + command dispatch
-interactive_maps.py    # Button/list IDs → commands
-bot_reply.py           # Text + optional interactive outbound
-vent_flow.py           # Multi-turn /vent
-sentiment_nlp.py       # VADER + crisis (single NLP module)
-checkin_flow.py        # Guided /checkin
-recommender.py         # ML + rules
-wellness_bot_class.py  # Command handlers
-database.py            # Schema + migrations
-state_store.py         # Conversation state in SQLite
-dashboard.py           # Streamlit analytics
-mental_wellness.py     # Legacy Flask/Twilio
+app.py                      # FastAPI webhook + schedulers
+bot_router.py               # State machine
+meditation_scheduler.py     # Timed meditation parts
+checkin_nudge_scheduler.py  # Daily /remind pushes
+whatsapp_cloud.py           # Cloud API send/verify
+wellness_bot_class.py       # Command handlers
+dashboard.py                # Streamlit
+archive/                    # Legacy Flask/Twilio (reference only)
+docs/LONG_LIVED_TOKEN.md
 ```
 
 ## Deploy (Render)
 
-Step-by-step: **[DEPLOY.md](DEPLOY.md)**
+| Blueprint | Purpose |
+|-----------|---------|
+| [render.yaml](render.yaml) | Bot only (free) |
+| [render.with-disk.yaml](render.with-disk.yaml) | Bot + persistent DB |
+| [render.full.yaml](render.full.yaml) | Bot + Streamlit + disk |
+| [render-dashboard.yaml](render-dashboard.yaml) | Streamlit only |
 
-- Default: `render.yaml` (free web service + 24h in-app backups)  
-- Optional: `render.with-disk.yaml` (1 GB persistent disk + nightly cron)  
-- Streamlit: run locally; second Render service later  
+Full guide: **[DEPLOY.md](DEPLOY.md)**
 
-```bash
-py scripts/backup_db.py   # manual backup anytime
-```
+## Interactive UI
 
-## Interactive UI (WhatsApp)
-
-Tap **Open menu** after `/start` for a list of actions. Buttons also appear for:
-
-- Meditation length (quick / medium / long)
-- Breathing patterns (calm / relaxation / energize)
-- Check-in topic (list)
-- After vent replies (done / affirmation / breathe)
-
-Slash commands still work.
+Buttons/lists for meditate, breathe, check-in category, vent follow-ups, and main menu after `/start`.
 
 ## Roadmap
 
-1. ~~Deploy to Render~~ → [DEPLOY.md](DEPLOY.md)  
+1. ~~Deploy to Render~~  
 2. ~~Interactive buttons / lists~~  
-3. **Long-lived WhatsApp token** (less manual refresh on Render)  
-4. ~~Timed meditation pushes~~ (after **ready** on Render)  
-5. **React dashboard** consuming `/api/*`  
-6. Optional constrained **GenAI** summaries (safety-reviewed)  
-7. **Friends demo guide** → [DEPLOY.md#friends-demo-development-only](DEPLOY.md) (tester list; not public production)  
+3. ~~Long-lived token guide~~ → [docs/LONG_LIVED_TOKEN.md](docs/LONG_LIVED_TOKEN.md)  
+4. ~~Timed meditation pushes~~  
+5. ~~Daily check-in reminders (`/remind`)~~  
+6. ~~Tests + CI~~  
+7. ~~Streamlit on Render~~ → `render.full.yaml`  
+8. **React dashboard** consuming `/api/*`  
+9. Optional constrained **GenAI** summaries  
+10. Meta **production** access (beyond tester list)  

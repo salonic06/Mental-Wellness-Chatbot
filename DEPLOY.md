@@ -1,14 +1,15 @@
 # Deploy to Render
 
-Streamlit stays **local** for now. This guide deploys only the **WhatsApp bot** (`app.py`).
+This guide covers the **WhatsApp bot**, optional **Streamlit dashboard**, tokens, inviting friends, and scheduled features.
 
 ## What you get
 
-| Piece | Free tier (`render.yaml`) | With disk (`render.with-disk.yaml`) |
-|--------|---------------------------|-------------------------------------|
+| Piece | Free tier (`render.yaml`) | With disk (`render.with-disk.yaml` / `render.full.yaml`) |
+|--------|---------------------------|-------------------------------------------------------------|
 | HTTPS URL for Meta webhook | Yes | Yes |
 | SQLite | Ephemeral (resets on **redeploy**) | Persists on 1 GB disk (~$0.25/mo) |
 | Backups | On-instance every 24h (`backups/`) | Same + optional nightly **Cron** job |
+| Streamlit online | `render-dashboard.yaml` (empty DB unless shared disk) | `render.full.yaml` (bot + dashboard share DB) |
 | Cold start | Free service sleeps when idle | Starter plan |
 
 ## 1. Push code
@@ -19,20 +20,28 @@ Repo must be on GitHub (already synced).
 
 1. [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**
 2. Connect **salonic06/Mental-Wellness-Chatbot**
-3. Pick **`render.yaml`** (free-friendly) or **`render.with-disk.yaml`** (paid disk + cron)
+3. Pick a blueprint:
+   - **`render.yaml`** — bot only, free-friendly
+   - **`render.with-disk.yaml`** — bot + disk + cron backup
+   - **`render.full.yaml`** — bot + **Streamlit** + disk (recommended if dashboard should show live data)
+   - **`render-dashboard.yaml`** — Streamlit only (second service)
 4. Apply blueprint
 
 ### Environment variables (Dashboard → your service → Environment)
 
 | Variable | Required | Example |
 |----------|----------|---------|
-| `WHATSAPP_ACCESS_TOKEN` | Yes | From Meta → WhatsApp → API setup |
-| `WHATSAPP_PHONE_NUMBER_ID` | Yes | Phone number ID |
+| `WHATSAPP_ACCESS_TOKEN` | Yes | Long-lived token — see [docs/LONG_LIVED_TOKEN.md](docs/LONG_LIVED_TOKEN.md) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Yes | Phone number **ID** from API Setup (not the display number) |
 | `META_VERIFY_TOKEN` | Yes | Same as local `.env` |
 | `META_APP_SECRET` | Yes | App secret (signature verify) |
 | `TIMEZONE` | No | `Asia/Kolkata` |
-| `ADMIN_NUMBERS` | No | `919422048569` |
+| `ADMIN_NUMBERS` | No | `919422048569` (digits only, comma-separated) |
+| `WHATSAPP_DISPLAY_NUMBER` | No | Business phone for **wa.me** links: digits only, e.g. `15551234567` |
 | `ENABLE_SCHEDULED_BACKUP` | No | `true` (default in blueprint) |
+| `ENABLE_MEDITATION_NUDGES` | No | `true` |
+| `ENABLE_DAILY_CHECKIN_NUDGES` | No | `true` on Render blueprint |
+| `DAILY_NUDGE_HOUR` | No | `9` (local hour in `TIMEZONE`) |
 
 Do **not** upload `.env` to git.
 
@@ -44,17 +53,24 @@ Do **not** upload `.env` to git.
    - **Verify token:** your `META_VERIFY_TOKEN`  
 3. Subscribe to **messages**
 
-## 4. WhatsApp token on Render
+## 4. Long-lived WhatsApp token
 
-Temporary Meta tokens expire (~24h). For a stable demo:
+Temporary tokens from API Setup expire in ~24 hours.
 
-- Create a **System User** + **long-lived token** in Meta Business settings, or  
-- Refresh `WHATSAPP_ACCESS_TOKEN` in Render when messages fail with 401
+**Full step-by-step:** [docs/LONG_LIVED_TOKEN.md](docs/LONG_LIVED_TOKEN.md)
+
+Short version:
+
+1. Meta Business Settings → **System users** → create user → assign WhatsApp + app.
+2. **Generate token** with `whatsapp_business_messaging`.
+3. Paste into Render as `WHATSAPP_ACCESS_TOKEN`.
+4. Renew before expiry (~60 days for many system user tokens).
 
 ## 5. Verify
 
 - Browser: `https://YOUR-SERVICE.onrender.com/health` → `{"status":"ok"}`
 - WhatsApp: send `/start` to your test number  
+- Admin: `/ping` and `/stats` (if your number is in `ADMIN_NUMBERS`)
 - Render **Logs** if nothing replies (cold start can take ~30s on free tier)
 
 ## Backups
@@ -63,83 +79,131 @@ Temporary Meta tokens expire (~24h). For a stable demo:
 
 - App runs `scripts/backup_db.py` on startup and every 24h into `backups/` on the instance  
 - Survives **restarts**, not **redeploys**  
-- Periodically download DB from your machine if you care about production data:
 
-  ```bash
-  py scripts/backup_db.py
-  ```
+**With disk (`render.with-disk.yaml` / `render.full.yaml`):**
 
-**With disk (`render.with-disk.yaml`):**
-
-- Set `DATABASE_PATH=/data/wellness.db`, `BACKUP_DIR=/data/backups`  
+- `DATABASE_PATH=/data/wellness.db`, `BACKUP_DIR=/data/backups`  
 - Cron job runs daily at 03:00 UTC  
-- DB + backups survive redeploys
+
+```bash
+py scripts/backup_db.py   # manual backup locally
+```
+
+## Streamlit on Render
+
+| Blueprint | Use when |
+|-----------|----------|
+| `render-dashboard.yaml` | Dashboard only; set `DATABASE_PATH` manually if you mount disk |
+| `render.full.yaml` | Bot + dashboard share `/data/wellness.db` (best for demos) |
+
+Start command (if creating manually):
+
+```bash
+streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+```
 
 ## Local vs Render
 
 | | Local | Render |
 |---|--------|--------|
 | Bot | `uvicorn app:app` | Same command (auto) |
-| Dashboard | `streamlit run dashboard.py` | Keep local; point at copied `wellness.db` or use `/api/*` later |
+| Dashboard | `streamlit run dashboard.py` | `render.full.yaml` or local + copied DB |
 | Tunnel | ngrok | Render URL |
-
-## Optional: second service (Streamlit later)
-
-New **Web Service**, same repo:
-
-- **Start command:** `streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0`  
-- Mount same disk or use Postgres when you outgrow SQLite
 
 ## Troubleshooting
 
 | Issue | Fix |
 |--------|-----|
 | Webhook verify fails | URL must end with `/webhook`; token must match |
-| 401 on send | Refresh `WHATSAPP_ACCESS_TOKEN` |
+| 401 on send | Refresh or replace `WHATSAPP_ACCESS_TOKEN` — see long-lived token doc |
 | Slow first message | Free tier waking up — retry after 30s |
-| Empty dashboard locally | Render DB is separate; copy backup or re-seed demo data |
+| Empty dashboard on Render | Bot DB is separate unless you use `render.full.yaml` |
+| Daily reminder not sent | User must `/remind on`; `ENABLE_DAILY_CHECKIN_NUDGES=true`; service awake after `DAILY_NUDGE_HOUR` |
 
 ---
 
-## Friends demo (development only)
+## Show the chatbot to a new person
 
-This project is scoped as a **development / friends demo**, not public production.
+Meta **development mode** only allows people on your **tester list** (not the general public).
 
-### Add a friend as a tester
+### Step A — Add them as a tester (you, once per friend)
 
-1. [Meta for Developers](https://developers.facebook.com/) → your app → **WhatsApp** → **API Setup** (or **Configuration**).
-2. Under **To** / **Phone numbers** → **Manage phone number list** → **Add phone number**.
-3. Enter their full international number (e.g. `91XXXXXXXXXX`).
-4. They complete the verification code in WhatsApp.
-5. They message your **test business number** (shown in API Setup, e.g. `+1 555 …`).
+1. [Meta for Developers](https://developers.facebook.com/) → your app → **WhatsApp** → **API Setup**.
+2. Under **To** → **Manage phone number list** → **Add phone number**.
+3. Enter their full international number (e.g. `91XXXXXXXXXX`, no `+`).
+4. They accept the verification code in WhatsApp.
 
-### What friends should do
+### Step B — Give them a way to open the chat
 
-- Send `/start` → tap **Open menu** for buttons/lists.
-- Or use slash commands (`/checkin`, `/vent`, `/help`) as before.
+**Option 1 — wa.me link (easiest)**
+
+1. Set `WHATSAPP_DISPLAY_NUMBER` on Render to your **business test number** (digits only).  
+   Find it in API Setup (e.g. `15551234567`).
+2. As admin, send `/invite` on WhatsApp — bot replies with a ready-made link.  
+   Or build manually:
+
+   ```
+   https://wa.me/15551234567?text=Hi
+   ```
+
+   Rules: **no `+`**, **no spaces**, country code included.
+
+3. Friend taps the link → WhatsApp opens → they send the pre-filled “Hi” (or any message).
+
+**Option 2 — Add contact manually**
+
+They save your test business number from API Setup and message it like any contact.
+
+### Step C — First message
+
+They type **`/start`** and use **Open menu** or slash commands (`/checkin`, `/vent`, `/meditate quick`, etc.).
 
 ### What you maintain
 
-- Render service stays **live** (free tier may sleep — first reply can be slow).
-- Refresh **WHATSAPP_ACCESS_TOKEN** in Render when Meta returns 401 (~24h tokens).
-- Optional: share `https://wa.me/PHONE_NUMBER` link (digits only, no `+`) after they are added as testers.
+- Render service **live** (free tier may sleep).
+- Valid **long-lived token** on Render.
+- Tester list updated when adding friends.
 
 ### Not in scope for this demo
 
-- Public launch without Meta **production** approval and Business Verification.
-- Serving unknown users who are not on the tester list.
+- Public launch without Meta **production** approval.
+- Users not on the tester list cannot message the bot.
 
-See roadmap: **long-lived token** and **production access** are planned for later if you outgrow the tester list.
+---
+
+## Friends demo (summary)
+
+Same as above: testers only, `/start` to begin, `/invite` for wa.me link when `WHATSAPP_DISPLAY_NUMBER` is set.
 
 ## Timed meditation nudges
 
-When `ENABLE_MEDITATION_NUDGES=true` (default in `render.yaml`):
+When `ENABLE_MEDITATION_NUDGES=true` (default):
 
-1. User starts `/meditate quick` (or medium/long) and types **ready**.
-2. The bot sends part 2 at **ready**, then automatic messages at **2 min** and **3 min** after ready (quick session).
-3. **pause** stops timers; **resume** continues (catch-up if you were late).
-4. Typing **next** or **end** cancels pending nudges (manual **next** still works).
+1. `/meditate quick` → type **ready** (part 1 immediately).
+2. Auto parts at **+1 min** and **+2 min** after ready (quick session).
+3. **pause** / **resume** — resume paces ~1 min per remaining step (no burst).
+4. **next** / **end** cancels pending timers.
 
-Requires the **web service to stay running** (Render). Free tier sleep may delay the first nudge until the app wakes again.
+Requires the web service to stay running. Free-tier sleep may delay nudges.
 
-Disable on Render: set `ENABLE_MEDITATION_NUDGES=false`.
+## Daily check-in reminders
+
+When `ENABLE_DAILY_CHECKIN_NUDGES=true`:
+
+1. User sends **`/remind on`** (opt-in).
+2. Once per local day after `DAILY_NUDGE_HOUR` in `TIMEZONE`, bot may send a gentle check-in prompt.
+3. **`/remind off`** to stop; **`/remind`** for status.
+
+Disable globally: `ENABLE_DAILY_CHECKIN_NUDGES=false`.
+
+## Admin commands (Cloud API)
+
+Set `ADMIN_NUMBERS` to your WhatsApp digits (same format as stored sender id).
+
+| Command | Purpose |
+|---------|---------|
+| `/stats` | SQLite usage counts |
+| `/ping` | Env vars present? |
+| `/invite` | wa.me link + tester instructions |
+
+Legacy Twilio `/checklimit` and `/checkusage` were removed.

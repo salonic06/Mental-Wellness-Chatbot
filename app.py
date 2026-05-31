@@ -16,6 +16,7 @@ from api_routes import router as api_router
 from bot_router import process_message
 from database import init_db
 from interactive_maps import resolve_inbound_text
+from checkin_nudge_scheduler import start_daily_nudge_scheduler
 from meditation_scheduler import on_meditation_user_message
 from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_message, verify_meta_signature
 
@@ -57,6 +58,7 @@ def on_startup() -> None:
     init_db()
     logger.info("Database initialized at %s", os.environ.get("DATABASE_PATH", "wellness.db"))
     _start_backup_scheduler()
+    start_daily_nudge_scheduler()
 
 
 def _required_env(name: str) -> str:
