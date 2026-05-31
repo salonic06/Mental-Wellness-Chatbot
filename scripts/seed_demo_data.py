@@ -12,7 +12,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = ROOT / "wellness.db"
+sys.path.insert(0, str(ROOT))
+from db_paths import DATABASE_PATH  # noqa: E402
+
+DB_PATH = DATABASE_PATH
 
 CATEGORIES = ["work", "health", "relationships", "studies", "other"]
 NOTES = [

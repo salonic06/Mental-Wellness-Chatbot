@@ -6,6 +6,8 @@ from datetime import datetime
 import random
 import sqlite3
 
+from db_paths import connect
+
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -79,7 +81,7 @@ class WellnessBot:
 
     def _add_user_to_db(self, phone_number):
         try:
-            conn = sqlite3.connect('wellness.db')
+            conn = connect()
             c = conn.cursor()
             c.execute('INSERT OR IGNORE INTO users (phone_number, joined_date) VALUES (?, ?)',
                       (phone_number, datetime.now()))
@@ -107,7 +109,7 @@ class WellnessBot:
                 if detect_crisis(notes):
                     return handle_crisis(sender, notes, source="mood", intensity=intensity)
 
-            conn = sqlite3.connect('wellness.db')
+            conn = connect()
             c = conn.cursor()
             c.execute('''INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
                         VALUES (?, ?, ?, ?, ?)''',
@@ -163,7 +165,7 @@ class WellnessBot:
 
     def clear_active_meditation(self, sender: str) -> None:
         try:
-            conn = sqlite3.connect("wellness.db")
+            conn = connect()
             c = conn.cursor()
             c.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
             conn.commit()
@@ -206,7 +208,7 @@ class WellnessBot:
         keys = self._meditation_script_keys(selected)
         intro = selected["script"].get(keys[0], "Let's begin.")
 
-        conn = sqlite3.connect("wellness.db")
+        conn = connect()
         c = conn.cursor()
         try:
             c.execute(
@@ -235,7 +237,7 @@ class WellnessBot:
         )
 
     def handle_meditation_progress(self, message, sender):
-        conn = sqlite3.connect("wellness.db")
+        conn = connect()
         cursor = conn.cursor()
 
         try:
@@ -362,7 +364,7 @@ class WellnessBot:
         return start_vent(sender)
 
     def mood_analysis(self, args, sender):
-        conn = sqlite3.connect('wellness.db')
+        conn = connect()
         c = conn.cursor()
         c.execute('''SELECT AVG(intensity), COUNT(*) 
                     FROM mood_logs 

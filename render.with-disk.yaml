@@ -1,0 +1,41 @@
+# Optional: 1 GB persistent disk (~$0.25/mo) shared by app + nightly cron.
+# Use when you want backups and DB to survive redeploys.
+
+services:
+  - type: web
+    name: mental-wellness-bot
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_PATH
+        value: /data/wellness.db
+      - key: BACKUP_DIR
+        value: /data/backups
+    disk:
+      name: wellness-data
+      mountPath: /data
+      sizeGB: 1
+
+  - type: cron
+    name: wellness-db-backup
+    runtime: python
+    plan: starter
+    schedule: "0 3 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/backup_db.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_PATH
+        value: /data/wellness.db
+      - key: BACKUP_DIR
+        value: /data/backups
+    disk:
+      name: wellness-data
+      mountPath: /data
+      sizeGB: 1

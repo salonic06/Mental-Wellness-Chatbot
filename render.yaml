@@ -1,0 +1,19 @@
+# Render Blueprint (free-friendly): web service only, ephemeral SQLite.
+# Daily backups: set ENABLE_SCHEDULED_BACKUP=true on the web service.
+# For shared disk + cron job, use render.with-disk.yaml instead.
+
+services:
+  - type: web
+    name: mental-wellness-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENABLE_SCHEDULED_BACKUP
+        value: "true"
+      - key: BACKUP_KEEP
+        value: "7"

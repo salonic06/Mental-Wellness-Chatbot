@@ -24,8 +24,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from db_paths import DATABASE_PATH
+
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "wellness.db"
+DB_PATH = DATABASE_PATH
 MODEL_PATH = BASE_DIR / "models" / "recommender.joblib"
 META_PATH = BASE_DIR / "models" / "recommender_meta.json"
 MIN_SAMPLES_TO_TRAIN = 12

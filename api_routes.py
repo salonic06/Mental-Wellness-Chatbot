@@ -8,7 +8,9 @@ from typing import Any, Dict
 
 from fastapi import APIRouter
 
-DB_PATH = Path(__file__).resolve().parent / "wellness.db"
+from db_paths import DATABASE_PATH
+
+DB_PATH = DATABASE_PATH
 
 router = APIRouter(prefix="/api", tags=["analytics"])
 

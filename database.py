@@ -1,8 +1,11 @@
 import sqlite3
 
+from db_paths import DATABASE_PATH
 
-def init_db(db_path: str = "wellness.db") -> None:
-    conn = sqlite3.connect(db_path)
+
+def init_db(db_path=None) -> None:
+    path = db_path or str(DATABASE_PATH)
+    conn = sqlite3.connect(path)
     c = conn.cursor()
     c.execute(
         """CREATE TABLE IF NOT EXISTS active_meditations

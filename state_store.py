@@ -2,8 +2,12 @@ import json
 import sqlite3
 from typing import Any, Dict, Optional
 
+from db_paths import DATABASE_PATH
 
-def get_user_state(user_phone: str, db_path: str = "wellness.db") -> Dict[str, Any]:
+_DB = str(DATABASE_PATH)
+
+
+def get_user_state(user_phone: str, db_path: str = _DB) -> Dict[str, Any]:
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute(
@@ -23,7 +27,7 @@ def set_user_state(
     user_phone: str,
     state: str,
     data: Optional[Dict[str, Any]] = None,
-    db_path: str = "wellness.db",
+    db_path: str = _DB,
 ) -> None:
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -36,5 +40,5 @@ def set_user_state(
     conn.close()
 
 
-def clear_user_state(user_phone: str, db_path: str = "wellness.db") -> None:
+def clear_user_state(user_phone: str, db_path: str = _DB) -> None:
     set_user_state(user_phone, "initial", {}, db_path)

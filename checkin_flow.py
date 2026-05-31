@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from db_paths import connect
 from recommender import recommend_intervention
 from sentiment_nlp import detect_crisis, handle_crisis
 from state_store import clear_user_state, get_user_state, set_user_state
@@ -34,7 +35,7 @@ def _save_checkin(user_phone: str, data: Dict[str, Any]) -> None:
     category = data.get("category", "other")
     note = data.get("note", "")
 
-    conn = sqlite3.connect("wellness.db")
+    conn = connect()
     c = conn.cursor()
     c.execute(
         """INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)

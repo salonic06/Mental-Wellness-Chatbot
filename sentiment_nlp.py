@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from db_paths import DATABASE_PATH
+
 BASE_DIR = Path(__file__).resolve().parent
 VENT_JSON = BASE_DIR / "vent_instructions.json"
 
@@ -141,9 +143,10 @@ def log_crisis_dashboard_marker(
     source: str,
     intensity: Optional[int] = None,
     category: Optional[str] = None,
-    db_path: str = "wellness.db",
+    db_path: Optional[str] = None,
 ) -> None:
     """Placeholder rows for dashboard — never stores the user's crisis message text."""
+    db_path = db_path or str(DATABASE_PATH)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     now = datetime.now()
@@ -177,8 +180,9 @@ def handle_crisis(
     source: str = "message",
     intensity: Optional[int] = None,
     category: Optional[str] = None,
-    db_path: str = "wellness.db",
+    db_path: Optional[str] = None,
 ) -> str:
+    db_path = db_path or str(DATABASE_PATH)
     log_vent_event(
         user_phone,
         "crisis",
@@ -235,8 +239,9 @@ def log_vent_event(
     word_count: int,
     is_crisis: bool = False,
     source: str = "vent",
-    db_path: str = "wellness.db",
+    db_path: Optional[str] = None,
 ) -> None:
+    db_path = db_path or str(DATABASE_PATH)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute(

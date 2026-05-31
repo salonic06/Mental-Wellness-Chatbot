@@ -1,6 +1,10 @@
 import json
 import logging
 import os
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -13,7 +17,8 @@ from bot_router import process_message
 from database import init_db
 from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_text_message, verify_meta_signature
 
-_ENV_PATH = Path(__file__).resolve().parent / ".env"
+_BASE_DIR = Path(__file__).resolve().parent
+_ENV_PATH = _BASE_DIR / ".env"
 load_dotenv(_ENV_PATH, override=True)
 
 logger = logging.getLogger("mental_wellness_bot")
@@ -23,10 +28,33 @@ app = FastAPI(title="Mental Wellness Chatbot (WhatsApp Cloud API)")
 app.include_router(api_router)
 
 
+def _run_db_backup() -> None:
+    script = _BASE_DIR / "scripts" / "backup_db.py"
+    try:
+        subprocess.run([sys.executable, str(script)], check=False, timeout=120)
+    except Exception as exc:
+        logger.warning("DB backup failed: %s", exc)
+
+
+def _backup_scheduler_loop() -> None:
+    _run_db_backup()
+    while True:
+        time.sleep(24 * 3600)
+        _run_db_backup()
+
+
+def _start_backup_scheduler() -> None:
+    if os.environ.get("ENABLE_SCHEDULED_BACKUP", "").lower() not in ("1", "true", "yes"):
+        return
+    threading.Thread(target=_backup_scheduler_loop, daemon=True).start()
+    logger.info("Scheduled DB backup enabled (on startup + every 24h)")
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
-    logger.info("Database initialized")
+    logger.info("Database initialized at %s", os.environ.get("DATABASE_PATH", "wellness.db"))
+    _start_backup_scheduler()
 
 
 def _required_env(name: str) -> str:

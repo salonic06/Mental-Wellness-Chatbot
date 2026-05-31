@@ -6,5 +6,6 @@ __pycache__/
 .idea/
 *.pyc
 wellness.db
+backups/
 models/
 reports/

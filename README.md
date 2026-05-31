@@ -145,9 +145,22 @@ dashboard.py           # Streamlit analytics
 mental_wellness.py     # Legacy Flask/Twilio
 ```
 
+## Deploy (Render)
+
+Step-by-step: **[DEPLOY.md](DEPLOY.md)**
+
+- Default: `render.yaml` (free web service + 24h in-app backups)  
+- Optional: `render.with-disk.yaml` (1 GB persistent disk + nightly cron)  
+- Streamlit: run locally; second Render service later  
+
+```bash
+py scripts/backup_db.py   # manual backup anytime
+```
+
 ## Roadmap
 
-1. **Deploy** (Render/Railway) + long-lived WhatsApp token  
-2. **React dashboard** consuming `/api/*`  
-3. WhatsApp **interactive buttons** (lists/buttons)  
-4. Optional constrained **GenAI** summaries (safety-reviewed)  
+1. ~~Deploy to Render~~ → see [DEPLOY.md](DEPLOY.md)  
+2. Long-lived WhatsApp token + interactive **buttons**  
+3. Timed meditation pushes (reliable on always-on Render)  
+4. **React dashboard** consuming `/api/*`  
+5. Optional constrained **GenAI** summaries (safety-reviewed)  
