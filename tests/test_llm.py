@@ -64,12 +64,18 @@ def test_affirmation_uses_llm_when_available(bot, user_phone, monkeypatch):
 def _seed_moods(user_phone, values):
     conn = db_paths.connect()
     c = conn.cursor()
+    now = datetime.now().isoformat()
     for v in values:
         c.execute(
             "INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes) "
             "VALUES (?, ?, ?, ?, ?)",
-            (user_phone, "checkin", v, datetime.now(), ""),
+            (user_phone, "checkin", v, now, ""),
         )
+    c.execute(
+        "INSERT INTO checkins (user_phone, intensity, category, note, created_at) "
+        "VALUES (?, 5, 'work', 'deadlines', ?)",
+        (user_phone, now),
+    )
     conn.commit()
     conn.close()
 
@@ -92,9 +98,12 @@ def test_llm_crisis_sentinel_routes_to_crisis(tmp_db, user_phone, monkeypatch):
     from vent_flow import handle_vent_message, start_vent
 
     start_vent(user_phone)
-    monkeypatch.setattr(llm_client, "generate", lambda *a, **k: "[[CRISIS]]")
-    reply = handle_vent_message(user_phone, "honestly there is no point to any of this")
-    assert "crisis" in reply.lower() or "iCall" in reply or "1860" in reply
+    monkeypatch.setattr(
+        "llm_wellness.empathetic_vent_reply",
+        lambda *a, **k: "[[CRISIS]]",
+    )
+    reply = handle_vent_message(user_phone, "everything feels pointless lately")
+    assert "iCall" in reply or "1860" in reply or "emergency" in reply.lower()
     assert "[[CRISIS]]" not in reply  # sentinel must never leak to the user
 
 

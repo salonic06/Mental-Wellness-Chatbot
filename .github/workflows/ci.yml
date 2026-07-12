@@ -25,4 +25,5 @@ jobs:
         env:
           META_VERIFY_TOKEN: test-token
           META_APP_SECRET: test-secret
-        run: pytest -q
+          LLM_PROVIDER: none
+        run: pytest -q --tb=short
