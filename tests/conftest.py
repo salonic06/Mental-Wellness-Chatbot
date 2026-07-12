@@ -34,6 +34,18 @@ def reset_bot_singleton():
     bot_router._bot_instance = None
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_llm_env(monkeypatch):
+    """Keep tests offline: ignore any LLM_* values from a local .env.
+
+    Tests that need the LLM 'enabled' set their own env or patch
+    ``llm_client.generate`` directly.
+    """
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    yield
+
+
 @pytest.fixture()
 def bot(tmp_db):
     from wellness_bot_class import WellnessBot

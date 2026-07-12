@@ -143,6 +143,11 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         command, args = bot.get_command_and_args(text_lower)
         if command in ("/done", "/cancel"):
             return BotReply(handle_vent_message(sender, raw_text.strip()) or "")
+        # Common commands break out of vent and run normally (/start was confusing in REPL).
+        if command in ("/start", "/help", "/checkin", "/summary", "/analyze", "/mood"):
+            clear_user_state(sender)
+            if command in cmd_map:
+                return _dispatch_command(sender, command, args, session, bot, cmd_map)
         if command and command in VENT_SLASH_COMMANDS and command in cmd_map:
             return _dispatch_command(sender, command, args, session, bot, cmd_map)
         if command:

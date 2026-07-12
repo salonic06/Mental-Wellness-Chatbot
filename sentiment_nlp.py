@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from db_paths import DATABASE_PATH
+import db_paths
 
 BASE_DIR = Path(__file__).resolve().parent
 VENT_JSON = BASE_DIR / "vent_instructions.json"
@@ -44,6 +44,19 @@ CRISIS_PHRASES = [
     "ending my life",
     "take my life",
     "overdose",
+    "end it all",
+    "want to disappear",
+    "no point in living",
+    "no point living",
+    "can't go on",
+    "cant go on",
+    "don't want to be here anymore",
+    "dont want to be here anymore",
+    "better off without me",
+    "everyone would be better without me",
+    "world would be better without me",
+    "cut myself",
+    "cutting myself",
 ]
 
 CRISIS_RESPONSE = (
@@ -146,7 +159,7 @@ def log_crisis_dashboard_marker(
     db_path: Optional[str] = None,
 ) -> None:
     """Placeholder rows for dashboard — never stores the user's crisis message text."""
-    db_path = db_path or str(DATABASE_PATH)
+    db_path = db_path or str(db_paths.DATABASE_PATH)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     now = datetime.now()
@@ -182,7 +195,7 @@ def handle_crisis(
     category: Optional[str] = None,
     db_path: Optional[str] = None,
 ) -> str:
-    db_path = db_path or str(DATABASE_PATH)
+    db_path = db_path or str(db_paths.DATABASE_PATH)
     log_vent_event(
         user_phone,
         "crisis",
@@ -241,7 +254,7 @@ def log_vent_event(
     source: str = "vent",
     db_path: Optional[str] = None,
 ) -> None:
-    db_path = db_path or str(DATABASE_PATH)
+    db_path = db_path or str(db_paths.DATABASE_PATH)
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute(

@@ -4,6 +4,7 @@
   "/breathe": "breathing_exercise",
   "/meditate": "meditation_guide",
   "/affirmation": "daily_affirmation",
+  "/summary": "weekly_summary_command",
   "/checkin": "start_checkin_command",
   "/help": "help_command",
   "/vent": "vent_session",

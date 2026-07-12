@@ -7,8 +7,8 @@ from db_paths import DATABASE_PATH
 _DB = str(DATABASE_PATH)
 
 
-def get_user_state(user_phone: str, db_path: str = _DB) -> Dict[str, Any]:
-    conn = sqlite3.connect(db_path)
+def get_user_state(user_phone: str, db_path: Optional[str] = None) -> Dict[str, Any]:
+    conn = sqlite3.connect(db_path or _DB)
     c = conn.cursor()
     c.execute(
         "SELECT state, data_json FROM conversation_state WHERE user_phone = ?",
@@ -27,9 +27,9 @@ def set_user_state(
     user_phone: str,
     state: str,
     data: Optional[Dict[str, Any]] = None,
-    db_path: str = _DB,
+    db_path: Optional[str] = None,
 ) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path or _DB)
     c = conn.cursor()
     c.execute(
         """INSERT OR REPLACE INTO conversation_state (user_phone, state, data_json)
@@ -40,5 +40,5 @@ def set_user_state(
     conn.close()
 
 
-def clear_user_state(user_phone: str, db_path: str = _DB) -> None:
+def clear_user_state(user_phone: str, db_path: Optional[str] = None) -> None:
     set_user_state(user_phone, "initial", {}, db_path)

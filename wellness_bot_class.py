@@ -346,10 +346,30 @@ class WellnessBot:
             conn.close()
 
     def daily_affirmation(self, args, sender):
+        try:
+            from llm_wellness import personalized_affirmation
+
+            personalized = personalized_affirmation(sender)
+            if personalized:
+                return personalized
+        except Exception as e:
+            logger.error("Personalized affirmation failed: %s", e)
+
         if self.affirmations:
             return random.choice(self.affirmations)
-        else:
-            return "Sorry, no affirmations available right now."
+        return "Sorry, no affirmations available right now."
+
+    def weekly_summary_command(self, args, sender):
+        try:
+            from llm_wellness import weekly_summary_text
+
+            return weekly_summary_text(sender)
+        except Exception as e:
+            logger.error("Weekly summary failed: %s", e)
+            return (
+                "Couldn't build your weekly summary right now. "
+                "Try /analyze for a quick 7-day average."
+            )
 
     def start_checkin_command(self, args, sender):
         from checkin_flow import start_checkin
@@ -363,9 +383,10 @@ class WellnessBot:
 /mood [1-10] [note] - Log mood (optional note)
 /breathe [calm|relaxation|energize] - Breathing exercise
 /meditate [quick|medium|long] - Guided meditation (ready → next → end)
-/affirmation - Random affirmation
-/vent - Share thoughts; replies use sentiment + suggested commands
-/analyze - 7-day mood summary
+/affirmation - A personalized affirmation
+/vent - Share what's on your mind; get a supportive reply
+/analyze - 7-day mood average
+/summary - Your weekly wellness reflection
 /remind on|off|status - Daily check-in reminder (optional)
 /cancel - Cancel current flow
 /help - This list

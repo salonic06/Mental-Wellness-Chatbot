@@ -4,6 +4,7 @@ from typing import Optional
 
 from sentiment_nlp import (
     analyze_sentiment,
+    handle_crisis,
     log_vent_event,
     response_for_bucket,
     vent_intro,
@@ -33,6 +34,23 @@ def handle_vent_message(user_phone: str, text: str) -> Optional[str]:
 
     bucket, _scores = analyze_sentiment(text)
     log_vent_event(user_phone, bucket, len(text.split()), source="vent")
+
+    # Preferred path: a warm, context-aware LLM reply (only if configured).
+    try:
+        from llm_wellness import CRISIS_SENTINEL, empathetic_vent_reply
+
+        llm_reply = empathetic_vent_reply(text, bucket, user_phone)
+    except Exception:  # never let the LLM layer break venting
+        llm_reply, CRISIS_SENTINEL = None, "[[CRISIS]]"
+
+    if llm_reply:
+        # Second safety layer: the model flags risk the phrase list didn't catch.
+        if CRISIS_SENTINEL in llm_reply:
+            clear_user_state(user_phone)
+            return handle_crisis(user_phone, text, source="vent")
+        return f"{llm_reply}\n\nShare more, or type /done to finish."
+
+    # Fallback: deterministic sentiment-bucket response.
     reply = response_for_bucket(bucket)
     tone = bucket.replace("_", " ")
     return (

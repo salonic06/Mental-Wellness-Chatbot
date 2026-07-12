@@ -7,7 +7,9 @@ from database import init_db
 
 def test_health():
     client = TestClient(app)
-    assert client.get("/health").json() == {"status": "ok"}
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert "llm" in body and "enabled" in body["llm"]
 
 
 def test_api_metrics(tmp_db, monkeypatch):

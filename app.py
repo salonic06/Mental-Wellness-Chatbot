@@ -140,5 +140,7 @@ async def webhook_receive(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from llm_client import status as llm_status
+
+    return {"status": "ok", "llm": llm_status()}
 
