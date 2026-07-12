@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
 import db_paths
 import llm_client
 
 logger = logging.getLogger(__name__)
+
+MAX_VENT_HISTORY_TURNS = 8  # user+assistant pairs kept for in-session context
 
 # If the model judges a free-text message to indicate self-harm / suicide risk,
 # it returns ONLY this token. The caller then routes to the crisis handler.
@@ -122,23 +124,50 @@ def build_user_context(user_phone: str) -> str:
 
 
 def empathetic_vent_reply(
-    user_text: str, sentiment_bucket: str, user_phone: str
+    user_text: str,
+    sentiment_bucket: str,
+    user_phone: str,
+    vent_history: Optional[List[dict]] = None,
 ) -> Optional[str]:
     """A supportive, context-aware reply to a free-text vent message."""
     context = build_user_context(user_phone)
     tone = sentiment_bucket.replace("_", " ")
+    history = _vent_history_to_turns(vent_history or [])
+
+    session_block = ""
+    if history:
+        session_block = (
+            "This is an ongoing vent session — read the prior turns and respond "
+            "to their latest message. Do not repeat advice you already gave; "
+            "build on what they shared.\n\n"
+        )
+
     user_prompt = (
         f"{SAFETY_DIRECTIVE}\n\n"
+        + session_block
         + (f"{context}\n\n" if context else "")
         + (
-            f"The person is venting. Detected emotional tone: {tone}.\n"
-            f'They wrote: "{user_text}"\n\n'
+            f"Detected emotional tone (latest message): {tone}.\n"
+            f'Their latest message: "{user_text}"\n\n'
             "Respond as their wellness companion. Acknowledge what they shared "
             "specifically, and offer warmth or one small, optional next step "
             "(such as taking a breath, or naming what they need)."
         )
     )
-    return llm_client.generate(_base_system(), user_prompt, temperature=0.75)
+    return llm_client.generate(
+        _base_system(), user_prompt, temperature=0.75, history=history
+    )
+
+
+def _vent_history_to_turns(vent_history: List[dict]) -> List[tuple]:
+    """Convert stored vent session to LLM (role, content) pairs."""
+    turns: List[tuple] = []
+    for item in vent_history[-MAX_VENT_HISTORY_TURNS * 2 :]:
+        role = item.get("role")
+        content = (item.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            turns.append((role, content))
+    return turns
 
 
 def personalized_affirmation(user_phone: str) -> Optional[str]:

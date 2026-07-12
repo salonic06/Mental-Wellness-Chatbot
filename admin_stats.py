@@ -7,14 +7,15 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
-from db_paths import DATABASE_PATH, connect
+import db_paths
 
 
 def fetch_bot_stats() -> Dict[str, Any]:
-    if not DATABASE_PATH.exists():
-        return {"error": "database_missing", "path": str(DATABASE_PATH)}
+    db_path = db_paths.DATABASE_PATH
+    if not db_path.exists():
+        return {"error": "database_missing", "path": str(db_path)}
 
-    conn = connect()
+    conn = db_paths.connect()
     try:
         c = conn.cursor()
 
@@ -46,7 +47,7 @@ def fetch_bot_stats() -> Dict[str, Any]:
                 "SELECT COUNT(*) FROM vent_logs WHERE created_at >= ?",
                 (week_ago,),
             ),
-            "database_path": str(DATABASE_PATH),
+            "database_path": str(db_path),
             "meditation_nudges": os.environ.get("ENABLE_MEDITATION_NUDGES", "true"),
             "daily_checkin_nudges": os.environ.get("ENABLE_DAILY_CHECKIN_NUDGES", "false"),
         }

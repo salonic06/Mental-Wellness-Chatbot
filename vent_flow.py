@@ -35,11 +35,16 @@ def handle_vent_message(user_phone: str, text: str) -> Optional[str]:
     bucket, _scores = analyze_sentiment(text)
     log_vent_event(user_phone, bucket, len(text.split()), source="vent")
 
+    session_data = dict(session.get("data") or {})
+    vent_history: list = list(session_data.get("vent_history") or [])
+
     # Preferred path: a warm, context-aware LLM reply (only if configured).
     try:
         from llm_wellness import CRISIS_SENTINEL, empathetic_vent_reply
 
-        llm_reply = empathetic_vent_reply(text, bucket, user_phone)
+        llm_reply = empathetic_vent_reply(
+            text, bucket, user_phone, vent_history=vent_history
+        )
     except Exception:  # never let the LLM layer break venting
         llm_reply, CRISIS_SENTINEL = None, "[[CRISIS]]"
 
@@ -48,6 +53,10 @@ def handle_vent_message(user_phone: str, text: str) -> Optional[str]:
         if CRISIS_SENTINEL in llm_reply:
             clear_user_state(user_phone)
             return handle_crisis(user_phone, text, source="vent")
+        vent_history.append({"role": "user", "content": text})
+        vent_history.append({"role": "assistant", "content": llm_reply})
+        session_data["vent_history"] = vent_history[-16:]  # cap stored turns
+        set_user_state(user_phone, "venting", session_data)
         return f"{llm_reply}\n\nShare more, or type /done to finish."
 
     # Fallback: deterministic sentiment-bucket response.
