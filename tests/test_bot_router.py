@@ -50,3 +50,16 @@ def test_free_text_hi_routes_companion(tmp_db, user_phone, monkeypatch):
     assert reply.text
     lowered = reply.text.lower()
     assert "menu" in lowered or "here" in lowered or "doing" in lowered
+
+
+def test_mood_without_args_starts_checkin(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    reply = process_message(user_phone, "/mood")
+    assert "check-in" in reply.text.lower() or "1" in reply.text
+    assert get_user_state(user_phone)["state"] == "checkin_mood"
+
+
+def test_analyze_routes_to_summary(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    reply = process_message(user_phone, "/analyze")
+    assert "check-in" in reply.text.lower() or "week" in reply.text.lower() or "mood" in reply.text.lower()

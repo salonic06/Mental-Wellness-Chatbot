@@ -10,12 +10,12 @@ from interactive_maps import (
     CHECKIN_CATEGORY_LIST,
     MAIN_MENU_LIST_SECTIONS,
     MEDITATION_BUTTONS,
-    VENT_FOLLOWUP_BUTTONS,
     resolve_inbound_text,
 )
+from patterns import CHAT_STATES
 from sentiment_nlp import detect_crisis, handle_crisis
 from state_store import clear_user_state, get_user_state, set_user_state
-from vent_flow import handle_vent_message
+from chat_flow import handle_chat_message, is_chatting
 from wellness_bot_class import WellnessBot
 
 logger = logging.getLogger(__name__)
@@ -76,6 +76,8 @@ def _dispatch_command(
 
     if command in ("/checkin", "/vent"):
         pass
+    elif command == "/mood" and not args.strip():
+        pass  # start_checkin sets state inside handler
     else:
         set_user_state(sender, "initial", session.get("data", {}))
 
@@ -136,29 +138,32 @@ def process_message(sender: str, raw_text: str) -> BotReply:
     session = get_user_state(sender)
     current_state = session["state"]
 
-    if current_state == "venting":
+    if is_chatting(sender) or current_state in CHAT_STATES:
         if stripped == "vent_done":
             return BotReply(
-                handle_vent_message(sender, "/done") or "Vent ended. Type /help anytime."
+                handle_chat_message(sender, "/done") or "Chat paused. Say hi anytime."
             )
         command, args = bot.get_command_and_args(text_lower)
         if command in ("/done", "/cancel"):
-            return BotReply(handle_vent_message(sender, raw_text.strip()) or "")
-        # Common commands break out of vent and run normally (/start was confusing in REPL).
+            return BotReply(handle_chat_message(sender, raw_text.strip()) or "")
         if command in ("/start", "/help", "/checkin", "/summary", "/analyze", "/mood"):
             clear_user_state(sender)
+            if command == "/analyze":
+                command = "/summary"
             if command in cmd_map:
                 return _dispatch_command(sender, command, args, session, bot, cmd_map)
         if command and command in VENT_SLASH_COMMANDS and command in cmd_map:
             return _dispatch_command(sender, command, args, session, bot, cmd_map)
         if command:
             return BotReply(
-                "Use the buttons below, type /done to finish venting, or keep sharing."
+                "Keep sharing, or /done when you're ready to pause."
             )
-        msg = handle_vent_message(sender, stripped) or "Share what's on your mind."
-        if msg.startswith("Thank you for sharing") or msg.startswith("Vent session ended"):
+        msg = handle_chat_message(sender, stripped) or "I'm listening."
+        if msg.startswith("I'm glad you shared") or msg.startswith("Chat paused"):
             return BotReply(msg)
-        return BotReply(msg, buttons=VENT_FOLLOWUP_BUTTONS)
+        from interactive_maps import CHAT_FOLLOWUP_BUTTONS
+
+        return BotReply(msg, buttons=CHAT_FOLLOWUP_BUTTONS)
 
     if current_state.startswith("checkin_"):
         return _checkin_reply(sender, stripped)
@@ -217,6 +222,8 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         return BotReply("Cancelled. Type /help for commands.")
 
     if command in cmd_map:
+        if command == "/analyze":
+            command = "/summary"
         reply = _dispatch_command(sender, command, args, session, bot, cmd_map)
     elif command:
         reply = BotReply("I didn't catch that command — open the menu or type /help.")

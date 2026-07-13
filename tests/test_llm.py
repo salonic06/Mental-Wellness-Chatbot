@@ -44,7 +44,7 @@ def test_vent_falls_back_without_llm(tmp_db, user_phone, monkeypatch):
 
     start_vent(user_phone)
     reply = handle_vent_message(user_phone, "Work was horrible today")
-    assert "Detected tone" in reply  # deterministic fallback preserved
+    assert "Tone:" in reply  # deterministic fallback preserved
 
 
 def test_affirmation_falls_back_without_llm(bot, user_phone, monkeypatch):

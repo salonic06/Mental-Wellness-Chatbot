@@ -37,11 +37,11 @@ def test_vent_session_history_accumulates(tmp_db, user_phone, monkeypatch):
 
 def test_vent_flow(tmp_db, user_phone):
     intro = start_vent(user_phone)
-    assert get_user_state(user_phone)["state"] == "venting"
+    assert get_user_state(user_phone)["state"] == "chatting"
     assert "/done" in intro.lower()
 
     reply = handle_vent_message(user_phone, "Today was stressful but I managed")
-    assert reply and "Detected tone" in reply
+    assert reply and ("Detected tone" in reply or "Tone:" in reply)
 
     done = handle_vent_message(user_phone, "/done")
     assert done

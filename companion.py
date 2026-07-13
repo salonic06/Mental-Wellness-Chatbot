@@ -1,14 +1,13 @@
 """
-Free-text companion routing — makes the bot feel conversational, not menu-only.
+Free-text companion routing — one persona, many modes.
 
-When the LLM is configured, greetings and emotional openers get warm, contextual
-replies in the same voice as /vent. Otherwise, curated fallbacks keep things human.
+Emotional or open messages auto-enter unified chat mode (same as /vent).
+Greetings and sign-offs stay lightweight one-shots.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Optional, Tuple
 
 from bot_reply import BotReply, Button
 
@@ -57,11 +56,8 @@ VENT_HINTS = (
     "numb",
 )
 
-COMPANION_BUTTONS: list[Button] = [
-    ("cmd_vent", "Talk it out"),
-    ("cmd_checkin", "Check-in"),
-    ("cmd_breathe", "Breathe"),
-]
+# Intents that open multi-turn chat automatically
+AUTO_CHAT_INTENTS = frozenset({"vent_hint", "open_share", "ambient"})
 
 
 def classify_free_text(text: str) -> str:
@@ -82,42 +78,32 @@ def classify_free_text(text: str) -> str:
         return "mood_hint"
     if len(t.split()) >= 8:
         return "open_share"
+    if len(t.split()) >= 4:
+        return "ambient"
     return "unknown"
 
 
 def _fallback_reply(intent: str, text: str) -> str:
     if intent == "greeting":
         return (
-            "Hey — good to hear from you. How are you really doing right now?\n\n"
-            "You can vent, do a quick check-in, or just pick something from the menu."
+            "Hey — good to hear from you. How are you really doing right now?"
         )
     if intent == "thanks":
         return "You're welcome. I'm here whenever you need me."
     if intent == "goodbye":
         return "Take care of yourself. I'll be here when you want to check back in."
-    if intent == "vent_hint":
-        return (
-            "That sounds like a lot to carry. Want to talk it through?\n\n"
-            "Type /vent — or just keep typing here and I'll listen."
-        )
+    if intent in AUTO_CHAT_INTENTS:
+        return "I'm listening — tell me more."
     if intent == "mood_hint":
         return (
-            "Want to log how you're feeling? Try /checkin for a guided one, "
-            "or /mood 6 with a short note."
+            "Want to log how you're feeling? /checkin walks you through it, "
+            "or send /mood 6 with a short note for a quick log."
         )
-    if intent == "open_share":
-        return (
-            "I'm listening. If you want a back-and-forth space to unpack this, "
-            "/vent is the best fit — no scripts, just conversation."
-        )
-    return (
-        "I'm here with you. Tell me how you're doing, or open the menu "
-        "for check-ins, breathing, and meditation."
-    )
+    return "I'm here with you. What's on your mind?"
 
 
 def companion_reply(user_phone: str, text: str, intent: str) -> str:
-    """Warm reply for free-text messages outside an active flow."""
+    """Warm one-shot reply when not entering chat mode."""
     try:
         from llm_wellness import companion_chat
 
@@ -129,9 +115,16 @@ def companion_reply(user_phone: str, text: str, intent: str) -> str:
     return _fallback_reply(intent, text)
 
 
+def _chat_followup_buttons() -> list[Button]:
+    from interactive_maps import CHAT_FOLLOWUP_BUTTONS
+
+    return CHAT_FOLLOWUP_BUTTONS
+
+
 def handle_free_text(user_phone: str, text: str) -> BotReply:
-    """Route casual inbound text to a companion-style reply."""
+    """Route casual inbound text — auto-enter chat for emotional/open messages."""
     intent = classify_free_text(text)
+
     if intent == "empty":
         return BotReply(
             "I'm here — what's on your mind?",
@@ -139,27 +132,25 @@ def handle_free_text(user_phone: str, text: str) -> BotReply:
             list_sections=_menu_sections(),
         )
 
+    if intent in AUTO_CHAT_INTENTS:
+        from chat_flow import enter_chat, handle_chat_message
+
+        enter_chat(user_phone)
+        msg = handle_chat_message(user_phone, text) or "Tell me more."
+        return BotReply(msg, buttons=_chat_followup_buttons())
+
     msg = companion_reply(user_phone, text, intent)
 
-    if intent == "vent_hint":
+    if intent == "mood_hint":
         return BotReply(
             msg,
             buttons=[
-                ("cmd_vent", "Start vent"),
-                ("cmd_breathe", "Breathe"),
-                ("cmd_checkin", "Check-in"),
-            ],
-        )
-    if intent == "open_share":
-        return BotReply(
-            msg,
-            buttons=[
-                ("cmd_vent", "Talk it out"),
                 ("cmd_checkin", "Check-in"),
                 ("cmd_breathe", "Breathe"),
+                ("cmd_summary", "My week"),
             ],
         )
-    if intent in ("greeting", "unknown", "mood_hint"):
+    if intent in ("greeting", "unknown"):
         return BotReply(
             msg,
             list_button_label="Wellness menu",
@@ -172,7 +163,3 @@ def _menu_sections():
     from interactive_maps import MAIN_MENU_LIST_SECTIONS
 
     return MAIN_MENU_LIST_SECTIONS
-
-
-def should_offer_vent(intent: str) -> bool:
-    return intent in ("vent_hint", "open_share")

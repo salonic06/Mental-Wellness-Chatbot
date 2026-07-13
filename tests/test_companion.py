@@ -28,6 +28,8 @@ def test_handle_free_text_hi(tmp_db, user_phone, monkeypatch):
 
 
 def test_handle_free_text_stressed(tmp_db, user_phone, monkeypatch):
+    from state_store import get_user_state
+
     reply = handle_free_text(user_phone, "I'm so anxious right now")
     assert reply.text
-    assert reply.buttons is not None
+    assert get_user_state(user_phone)["state"] == "chatting"

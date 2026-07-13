@@ -22,6 +22,7 @@ from typing import List, Optional
 
 import db_paths
 import llm_client
+from patterns import patterns_context_block
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +121,12 @@ def build_user_context(user_phone: str) -> str:
 
     if not lines:
         return ""
-    return "Context about this person (private, do not quote verbatim):\n" + "\n".join(lines)
+
+    pattern_block = patterns_context_block(user_phone)
+    base = "Context about this person (private, do not quote verbatim):\n" + "\n".join(lines)
+    if pattern_block:
+        return base + "\n\n" + pattern_block
+    return base
 
 
 def empathetic_vent_reply(
@@ -353,17 +359,20 @@ def weekly_summary_text(user_phone: str) -> str:
     """
     stats = weekly_stats(user_phone)
     fallback = _fallback_summary(stats)
+    patterns = patterns_context_block(user_phone)
 
     if not stats["entries"]:
         return fallback
 
     user_prompt = (
         "Write a brief, encouraging weekly wellness reflection for this person "
-        "based only on these numbers. 2-4 sentences, warm and non-clinical. "
-        "End with one small, optional suggestion.\n\n"
+        "based only on these numbers and patterns. 2-4 sentences, warm and "
+        "non-clinical. End with one small, optional suggestion.\n\n"
         f"Average mood this week: {stats['this_avg']}/10 ({stats['entries']} entries).\n"
         f"Average mood last week: {stats['last_avg']}.\n"
         f"Most frequent topic: {stats['top_topic']}."
     )
+    if patterns:
+        user_prompt += f"\n\n{patterns}"
     llm = llm_client.generate(_base_system(), user_prompt, temperature=0.6)
     return llm or fallback

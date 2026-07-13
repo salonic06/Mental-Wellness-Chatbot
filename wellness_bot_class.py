@@ -77,12 +77,10 @@ class WellnessBot:
             logger.error(f"Error adding user to DB: {e}")
 
     def log_mood(self, args, sender):
-        if not args:
-            return (
-                "How are you feeling? Send a number 1–10, optional note:\n"
-                "Example: /mood 7 quietly hopeful today\n\n"
-                "Or /checkin for a guided version."
-            )
+        if not args.strip():
+            from checkin_flow import start_checkin
+
+            return start_checkin(sender)
 
         try:
             parts = args.split(' ', 1)
@@ -418,43 +416,29 @@ class WellnessBot:
     def help_command(self, args, sender):
         return """*Wellness companion*
 
-Just talk — say hi, share how you feel, or use a command:
+Talk naturally — say hi, share how you feel, or use a command:
 
 /checkin — guided mood + topic
-/vent — open conversation space
-/mood 7 note — quick mood log
+/vent — open conversation (same as just talking)
+/mood 7 note — quick mood log without the wizard
 /breathe calm — breathing patterns
 /meditate quick — guided session
 /affirmation — personalized boost
-/summary — your week in words
-/remind on — morning check-in nudge
+/summary — your week + patterns (/analyze works too)
+/remind on — morning nudge
+/done — pause an open chat
 /cancel — exit current flow
 
 Tap the menu below for shortcuts."""
 
     def vent_session(self, args, sender):
-        from vent_flow import start_vent
+        from chat_flow import start_chat
 
-        return start_vent(sender)
+        return start_chat(sender)
 
     def mood_analysis(self, args, sender):
-        conn = connect()
-        c = conn.cursor()
-        c.execute('''SELECT AVG(intensity), COUNT(*) 
-                    FROM mood_logs 
-                    WHERE user_phone = ? 
-                    AND timestamp >= date('now', '-7 days')''',
-                  (sender,))
-        avg_mood, log_count = c.fetchone()
-        conn.close()
-
-        if not avg_mood:
-            return "No mood data available yet. Start logging with /mood!"
-
-        return (f"Your 7-day mood analysis:\n"
-                f"Average mood: {avg_mood:.1f}/10\n"
-                f"Logs this week: {log_count}\n\n"
-                "Keep tracking your moods to see patterns and growth! 📊")
+        """Legacy alias — weekly summary includes trends now."""
+        return self.weekly_summary_command(args, sender)
 
     def is_admin(self, phone_number):
         return _digits_only(phone_number) in self.admin_numbers

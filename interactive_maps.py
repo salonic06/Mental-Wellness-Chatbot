@@ -10,11 +10,11 @@ from bot_reply import Button
 INTERACTIVE_TO_TEXT: Dict[str, str] = {
     "cmd_checkin": "/checkin",
     "cmd_vent": "/vent",
-    "cmd_mood": "/mood",
     "cmd_meditate": "/meditate",
     "cmd_breathe": "/breathe",
     "cmd_affirmation": "/affirmation",
-    "cmd_analyze": "/analyze",
+    "cmd_summary": "/summary",
+    "cmd_analyze": "/summary",
     "cmd_help": "/help",
     "cmd_cancel": "/cancel",
     "med_quick": "/meditate quick",
@@ -41,13 +41,12 @@ MAIN_MENU_LIST_SECTIONS = [
     {
         "title": "Wellness",
         "rows": [
-            {"id": "cmd_checkin", "title": "Check-in", "description": "Mood + what's on your mind"},
-            {"id": "cmd_vent", "title": "Talk it out", "description": "Open conversation space"},
-            {"id": "cmd_mood", "title": "Log mood", "description": "Quick 1–10 + note"},
+            {"id": "cmd_checkin", "title": "Check-in", "description": "Mood + topic (guided)"},
+            {"id": "cmd_vent", "title": "Talk it out", "description": "Open conversation"},
             {"id": "cmd_meditate", "title": "Meditate", "description": "3 / 10 / 20 min guided"},
             {"id": "cmd_breathe", "title": "Breathe", "description": "Calm · relax · energize"},
             {"id": "cmd_affirmation", "title": "Affirmation", "description": "Personalized boost"},
-            {"id": "cmd_analyze", "title": "Mood trends", "description": "Last 7 days"},
+            {"id": "cmd_summary", "title": "My week", "description": "Reflection + trends"},
         ],
     }
 ]
@@ -77,11 +76,14 @@ CHECKIN_CATEGORY_LIST = [
     }
 ]
 
-VENT_FOLLOWUP_BUTTONS: List[Button] = [
-    ("vent_done", "Done venting"),
-    ("cmd_affirmation", "Affirmation"),
+CHAT_FOLLOWUP_BUTTONS: List[Button] = [
+    ("vent_done", "Pause chat"),
     ("cmd_breathe", "Breathe"),
+    ("cmd_checkin", "Check-in"),
 ]
+
+# Legacy alias
+VENT_FOLLOWUP_BUTTONS = CHAT_FOLLOWUP_BUTTONS
 
 
 def resolve_inbound_text(raw: str) -> str:
