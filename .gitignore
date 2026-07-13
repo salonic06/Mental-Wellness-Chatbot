@@ -10,3 +10,6 @@ backups/
 models/
 reports/
 _onedrive_conflict_backup/
+dashboard-web/node_modules/
+dashboard-web/.next/
+dashboard-web/.env.local

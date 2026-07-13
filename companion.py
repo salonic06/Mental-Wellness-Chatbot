@@ -139,6 +139,16 @@ def handle_free_text(user_phone: str, text: str) -> BotReply:
         msg = handle_chat_message(user_phone, text) or "Tell me more."
         return BotReply(msg, buttons=_chat_followup_buttons())
 
+    # Short affirmatives without pending offer → enter chat to continue thread
+    from session_offers import get_pending_offer, is_affirmative
+
+    if is_affirmative(text) and not get_pending_offer(user_phone):
+        from chat_flow import enter_chat, handle_chat_message
+
+        enter_chat(user_phone)
+        msg = handle_chat_message(user_phone, text) or "Tell me more."
+        return BotReply(msg, buttons=_chat_followup_buttons())
+
     msg = companion_reply(user_phone, text, intent)
 
     if intent == "mood_hint":

@@ -124,16 +124,26 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
                 user_phone, intensity, category, note, tip, cmd
             )
             if closing:
+                from chat_flow import enter_chat_with_context
+
+                enter_chat_with_context(user_phone, closing, pending_offer=cmd)
                 return closing
         except Exception:
             pass
 
         label = "For you" if source == "ml" else "Suggestion"
-        return (
+        plain = (
             f"Check-in saved — {intensity}/10, mostly about {category}.\n\n"
             f"{label}: {tip}\n\n"
             f"When you're ready: {cmd}"
         )
+        try:
+            from chat_flow import enter_chat_with_context
+
+            enter_chat_with_context(user_phone, plain, pending_offer=cmd)
+        except Exception:
+            pass
+        return plain
 
     clear_user_state(user_phone)
     return "Something went wrong during check-in. Type /checkin to start again."

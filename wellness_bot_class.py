@@ -136,20 +136,24 @@ class WellnessBot:
 
     def breathing_exercise(self, args, sender):
         if not args.strip():
-            lines = [
-                f"/breathe {name} — {info.get('description', '')}"
-                for name, info in self.breathing_patterns.items()
-            ]
-            return "Choose a breathing pattern:\n" + "\n".join(lines)
+            return (
+                "Pick a pattern — each shows timing and about how long it takes.\n\n"
+                "Tap a button below, or send /breathe calm | relaxation | energize"
+            )
 
         pattern_name = args.lower().split()[0]
         if pattern_name not in self.breathing_patterns:
             return "Pattern not found. Use: /breathe calm | relaxation | energize"
         pattern = self.breathing_patterns[pattern_name]
+        cycle = pattern["inhale"] + pattern["hold"] + pattern["exhale"]
+        total_sec = cycle * pattern["rounds"]
+        duration = f"~{total_sec // 60} min" if total_sec >= 60 else f"~{total_sec}s"
+
         return (
-            f"*{pattern_name.title()} breathing*\n"
-            f"Inhale {pattern['inhale']}s · hold {pattern['hold']}s · exhale {pattern['exhale']}s\n"
-            f"Repeat {pattern['rounds']} rounds at your own pace."
+            f"*{pattern_name.title()} breathing* ({duration} total)\n"
+            f"Inhale {pattern['inhale']}s · hold {pattern['hold']}s · "
+            f"exhale {pattern['exhale']}s — {pattern['rounds']} rounds.\n\n"
+            "Go at your own pace. When you finish, notice how your body feels."
         )
 
     def clear_active_meditation(self, sender: str) -> None:
@@ -414,22 +418,16 @@ class WellnessBot:
         return start_checkin(sender)
 
     def help_command(self, args, sender):
-        return """*Wellness companion*
-
-Talk naturally — say hi, share how you feel, or use a command:
-
-/checkin — guided mood + topic
-/vent — open conversation (same as just talking)
-/mood 7 note — quick mood log without the wizard
-/breathe calm — breathing patterns
-/meditate quick — guided session
-/affirmation — personalized boost
-/summary — your week + patterns (/analyze works too)
-/remind on — morning nudge
-/done — pause an open chat
-/cancel — exit current flow
-
-Tap the menu below for shortcuts."""
+        return (
+            "I'm your wellness companion — talk naturally or tap the menu.\n\n"
+            "Common shortcuts:\n"
+            "• /checkin — guided mood log\n"
+            "• Just talk — I'll listen (same as /vent)\n"
+            "• /summary — your week + patterns\n"
+            "• /breathe calm · /meditate quick · /affirmation\n"
+            "• /done — pause an open chat\n\n"
+            "Tap *Quick actions* below."
+        )
 
     def vent_session(self, args, sender):
         from chat_flow import start_chat

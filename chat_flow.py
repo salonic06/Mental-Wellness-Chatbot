@@ -50,13 +50,38 @@ def start_chat(user_phone: str) -> str:
     )
 
 
+def enter_chat_with_context(
+    user_phone: str,
+    assistant_message: str,
+    pending_offer: Optional[str] = None,
+) -> None:
+    """Open chat mode and seed history so follow-ups like 'sure' have context."""
+    data: dict = {
+        HISTORY_KEY: [{"role": "assistant", "content": assistant_message}],
+    }
+    if pending_offer:
+        data["pending_offer"] = pending_offer
+    set_user_state(user_phone, CHAT_STATE, data)
+
+
+def try_fulfill_in_chat(user_phone: str, text: str) -> Optional[str]:
+    """If user accepts a pending offer while chatting, return the action result text."""
+    from session_offers import clear_pending_offer, get_pending_offer, is_affirmative
+
+    offer = get_pending_offer(user_phone)
+    if not offer or not is_affirmative(text):
+        return None
+    clear_pending_offer(user_phone)
+    return f"__OFFER__:{offer}"
+
+
 def handle_chat_message(user_phone: str, text: str) -> Optional[str]:
     session = _normalize_state(user_phone)
     if session["state"] not in CHAT_STATES:
         return None
 
     lowered = text.strip().lower()
-    if lowered in ("/done", "done"):
+    if lowered in ("/done", "done", "vent_done"):
         clear_user_state(user_phone)
         return (
             "I'm glad you shared that. I'll remember the mood trends — "
@@ -66,6 +91,10 @@ def handle_chat_message(user_phone: str, text: str) -> Optional[str]:
     if lowered in ("/cancel", "cancel"):
         clear_user_state(user_phone)
         return "Chat paused. I'm here when you need me."
+
+    offer_hit = try_fulfill_in_chat(user_phone, text)
+    if offer_hit and offer_hit.startswith("__OFFER__:"):
+        return offer_hit  # router dispatches the command
 
     bucket, _scores = analyze_sentiment(text)
     log_vent_event(user_phone, bucket, len(text.split()), source="chat")

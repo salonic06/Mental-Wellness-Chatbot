@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from api_routes import router as api_router
@@ -75,6 +76,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Mental Wellness Chatbot (WhatsApp Cloud API)", lifespan=lifespan)
 app.include_router(api_router)
+
+_cors_origins = [
+    o.strip()
+    for o in (os.environ.get("DASHBOARD_CORS_ORIGINS") or "*").split(",")
+    if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 def _required_env(name: str) -> str:

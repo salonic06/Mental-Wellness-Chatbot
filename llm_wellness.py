@@ -299,8 +299,8 @@ def checkin_closing_reply(
         + note_line
         + f"A helpful next step might be: {suggested_tip} ({suggested_cmd}).\n\n"
         "Write 2-3 warm sentences acknowledging their check-in. Mention the score "
-        "naturally. Offer ONE optional next step in plain language — do not list "
-        "multiple commands or use markdown."
+        "naturally. Offer ONE optional next step in plain language — phrase it as "
+        "a suggestion, not a yes/no question. Do not list multiple commands."
     )
     return llm_client.generate(_base_system(), user_prompt, temperature=0.7)
 
@@ -352,22 +352,39 @@ def personalized_nudge(user_phone: str) -> Optional[str]:
     )
 
 
+def _summary_header(stats: dict) -> str:
+    lines = [
+        "*Your week*",
+        f"Average mood: {stats['this_avg']}/10 · {stats['entries']} entries",
+    ]
+    if stats["last_avg"] is not None:
+        delta = stats["this_avg"] - stats["last_avg"]
+        if delta >= 0.3:
+            lines.append(f"Trend: up from {stats['last_avg']} last week.")
+        elif delta <= -0.3:
+            lines.append(f"Trend: down from {stats['last_avg']} last week.")
+        else:
+            lines.append(f"Trend: steady (last week {stats['last_avg']}).")
+    if stats["top_topic"]:
+        lines.append(f"Top topic: {stats['top_topic']}.")
+    return "\n".join(lines)
+
+
 def weekly_summary_text(user_phone: str) -> str:
     """
-    A friendly weekly reflection. Uses the LLM to narrate the numbers when
-    available; otherwise a clean templated summary. Always returns a string.
+    Structured weekly stats + optional LLM narrative. Always returns a string.
     """
     stats = weekly_stats(user_phone)
-    fallback = _fallback_summary(stats)
+    if not stats["entries"]:
+        return _fallback_summary(stats)
+
+    header = _summary_header(stats)
     patterns = patterns_context_block(user_phone)
 
-    if not stats["entries"]:
-        return fallback
-
     user_prompt = (
-        "Write a brief, encouraging weekly wellness reflection for this person "
-        "based only on these numbers and patterns. 2-4 sentences, warm and "
-        "non-clinical. End with one small, optional suggestion.\n\n"
+        "Write 2-3 warm sentences reflecting on this person's week. "
+        "Do NOT repeat the numeric stats (they appear above your message). "
+        "No bullet lists. End with one small optional suggestion, not a yes/no question.\n\n"
         f"Average mood this week: {stats['this_avg']}/10 ({stats['entries']} entries).\n"
         f"Average mood last week: {stats['last_avg']}.\n"
         f"Most frequent topic: {stats['top_topic']}."
@@ -375,4 +392,5 @@ def weekly_summary_text(user_phone: str) -> str:
     if patterns:
         user_prompt += f"\n\n{patterns}"
     llm = llm_client.generate(_base_system(), user_prompt, temperature=0.6)
-    return llm or fallback
+    narrative = llm or "Keep noticing what helps — even small check-ins add up."
+    return f"{header}\n\n{narrative}"

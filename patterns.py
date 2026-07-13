@@ -100,6 +100,67 @@ def detect_user_patterns(user_phone: str, days: int = 14) -> Dict[str, Any]:
     }
 
 
+def global_insights(days: int = 14) -> Dict[str, Any]:
+    """Aggregate patterns across all users — safe for admin dashboard."""
+    since = (datetime.now() - timedelta(days=days)).isoformat()
+    conn = db_paths.connect()
+    c = conn.cursor()
+
+    c.execute(
+        """SELECT ROUND(AVG(intensity), 2), COUNT(*)
+           FROM mood_logs
+           WHERE mood != 'crisis' AND intensity IS NOT NULL AND timestamp >= ?""",
+        (since,),
+    )
+    mood_row = c.fetchone()
+    avg_mood, mood_n = (mood_row[0], mood_row[1] or 0) if mood_row else (None, 0)
+
+    c.execute(
+        """SELECT category, COUNT(*) FROM checkins
+           WHERE created_at >= ? GROUP BY category ORDER BY COUNT(*) DESC LIMIT 5""",
+        (since,),
+    )
+    top_categories = [{"category": r[0], "count": r[1]} for r in c.fetchall()]
+
+    c.execute(
+        """SELECT sentiment_bucket, COUNT(*) FROM vent_logs
+           WHERE is_crisis = 0 AND created_at >= ?
+           GROUP BY sentiment_bucket""",
+        (since,),
+    )
+    vent_tone = {r[0]: r[1] for r in c.fetchall()}
+
+    c.execute(
+        "SELECT COUNT(*) FROM vent_logs WHERE is_crisis = 1 AND created_at >= ?",
+        (since,),
+    )
+    crisis_n = c.fetchone()[0] or 0
+    conn.close()
+
+    insights: List[str] = []
+    if top_categories:
+        top = top_categories[0]
+        insights.append(
+            f"Most logged topic lately: {top['category']} ({top['count']} check-ins)."
+        )
+    neg = vent_tone.get("strong_negative", 0) + vent_tone.get("mild_negative", 0)
+    total_vent = sum(vent_tone.values())
+    if total_vent >= 3 and neg / total_vent >= 0.45:
+        insights.append("Conversation tone has leaned heavier recently.")
+    if crisis_n:
+        insights.append(f"{crisis_n} crisis safety flag(s) in the last {days} days.")
+
+    return {
+        "days": days,
+        "avg_mood": avg_mood,
+        "mood_entries": mood_n,
+        "top_categories": top_categories,
+        "vent_tone": vent_tone,
+        "crisis_events": crisis_n,
+        "insights": insights,
+    }
+
+
 def patterns_context_block(user_phone: str) -> str:
     """Short block for LLM system context."""
     p = detect_user_patterns(user_phone)

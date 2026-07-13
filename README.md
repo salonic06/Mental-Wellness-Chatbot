@@ -157,6 +157,6 @@ Buttons/lists for meditate, breathe, check-in category, vent follow-ups, and mai
 5. ~~Daily check-in reminders (`/remind`)~~  
 6. ~~Tests + CI~~  
 7. ~~Streamlit on Render~~ → `render.full.yaml`  
-8. **React dashboard** consuming `/api/*`  
-9. Optional constrained **GenAI** summaries  
+8. ~~**Next.js dashboard** consuming `/api/*`~~ → [docs/DASHBOARD.md](docs/DASHBOARD.md) (`dashboard-web/`)  
+9. ~~Optional **GenAI** summaries + **LLM eval harness**~~ → `llm_wellness.py` + `llm_eval_harness.py`  
 10. Meta **production** access (beyond tester list)  

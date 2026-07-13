@@ -14,7 +14,7 @@ def test_checkin_happy_path(tmp_db, user_phone):
 
     r3 = handle_checkin_message(user_phone, "busy week")
     assert r3
-    assert get_user_state(user_phone)["state"] == "initial"
+    assert get_user_state(user_phone)["state"] == "chatting"
 
 
 def test_checkin_cancel(tmp_db, user_phone):

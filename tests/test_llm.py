@@ -89,7 +89,7 @@ def test_weekly_summary_templated_fallback(tmp_db, user_phone, monkeypatch):
     _clear_llm_env(monkeypatch)
     _seed_moods(user_phone, [6, 7, 8])
     text = llm_wellness.weekly_summary_text(user_phone)
-    assert "average mood" in text.lower()
+    assert "*Your week*" in text
     assert "7.0/10" in text
 
 
