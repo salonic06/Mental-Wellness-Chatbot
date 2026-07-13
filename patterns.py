@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import db_paths
+from db_sql import execute
 
 CHAT_STATE = "chatting"
 LEGACY_VENT_STATE = "venting"
@@ -24,7 +25,8 @@ def detect_user_patterns(user_phone: str, days: int = 14) -> Dict[str, Any]:
     conn = db_paths.connect()
     c = conn.cursor()
 
-    c.execute(
+    execute(
+        c,
         """SELECT intensity, category, note, created_at FROM checkins
            WHERE user_phone = ? AND created_at >= ?
            ORDER BY created_at DESC""",
@@ -32,7 +34,8 @@ def detect_user_patterns(user_phone: str, days: int = 14) -> Dict[str, Any]:
     )
     checkins = c.fetchall()
 
-    c.execute(
+    execute(
+        c,
         """SELECT intensity, timestamp FROM mood_logs
            WHERE user_phone = ? AND mood != 'crisis' AND intensity IS NOT NULL
              AND timestamp >= ?
@@ -41,7 +44,8 @@ def detect_user_patterns(user_phone: str, days: int = 14) -> Dict[str, Any]:
     )
     moods = c.fetchall()
 
-    c.execute(
+    execute(
+        c,
         """SELECT sentiment_bucket, COUNT(*) FROM vent_logs
            WHERE user_phone = ? AND is_crisis = 0 AND created_at >= ?
            GROUP BY sentiment_bucket""",
@@ -106,7 +110,8 @@ def global_insights(days: int = 14) -> Dict[str, Any]:
     conn = db_paths.connect()
     c = conn.cursor()
 
-    c.execute(
+    execute(
+        c,
         """SELECT ROUND(AVG(intensity), 2), COUNT(*)
            FROM mood_logs
            WHERE mood != 'crisis' AND intensity IS NOT NULL AND timestamp >= ?""",
@@ -115,14 +120,16 @@ def global_insights(days: int = 14) -> Dict[str, Any]:
     mood_row = c.fetchone()
     avg_mood, mood_n = (mood_row[0], mood_row[1] or 0) if mood_row else (None, 0)
 
-    c.execute(
+    execute(
+        c,
         """SELECT category, COUNT(*) FROM checkins
            WHERE created_at >= ? GROUP BY category ORDER BY COUNT(*) DESC LIMIT 5""",
         (since,),
     )
     top_categories = [{"category": r[0], "count": r[1]} for r in c.fetchall()]
 
-    c.execute(
+    execute(
+        c,
         """SELECT sentiment_bucket, COUNT(*) FROM vent_logs
            WHERE is_crisis = 0 AND created_at >= ?
            GROUP BY sentiment_bucket""",
@@ -130,7 +137,8 @@ def global_insights(days: int = 14) -> Dict[str, Any]:
     )
     vent_tone = {r[0]: r[1] for r in c.fetchall()}
 
-    c.execute(
+    execute(
+        c,
         "SELECT COUNT(*) FROM vent_logs WHERE is_crisis = 1 AND created_at >= ?",
         (since,),
     )

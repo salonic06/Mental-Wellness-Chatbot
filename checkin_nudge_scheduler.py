@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from db_paths import connect
+from db_sql import execute
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,8 @@ def set_daily_reminder(user_phone: str, enabled: bool) -> None:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             """INSERT INTO daily_reminders (user_phone, enabled, last_sent_date)
                VALUES (?, ?, NULL)
                ON CONFLICT(user_phone) DO UPDATE SET enabled = excluded.enabled""",
@@ -97,7 +99,8 @@ def get_reminder_status(user_phone: str) -> dict:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             "SELECT enabled, last_sent_date FROM daily_reminders WHERE user_phone = ?",
             (user_phone,),
         )
@@ -113,7 +116,8 @@ def _users_due_today(local_today: str) -> List[str]:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             """SELECT user_phone FROM daily_reminders
                WHERE enabled = 1
                  AND (last_sent_date IS NULL OR last_sent_date != ?)""",
@@ -128,8 +132,9 @@ def _mark_sent(user_phone: str, local_today: str) -> None:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
-            """UPDATE daily_reminders SET last_sent_date = ? WHERE user_phone = ?""",
+        execute(
+            c,
+            "UPDATE daily_reminders SET last_sent_date = ? WHERE user_phone = ?",
             (local_today, user_phone),
         )
         conn.commit()

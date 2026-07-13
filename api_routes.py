@@ -9,25 +9,39 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends
 
 from api_auth import require_dashboard_key
-from db_paths import DATABASE_PATH
+from db_paths import backend_label, connect, db_available, storage_kind
+from db_sql import execute
 from patterns import global_insights
-
-DB_PATH = DATABASE_PATH
 
 router = APIRouter(prefix="/api", tags=["analytics"], dependencies=[Depends(require_dashboard_key)])
 
 
-def _query(sql: str, params: tuple = ()) -> list:
-    if not DB_PATH.exists():
+def _query(sql_str: str, params: tuple = ()) -> list:
+    if not db_available():
         return []
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        return [dict(row) for row in conn.execute(sql, params).fetchall()]
+    conn = connect()
+    try:
+        if storage_kind() != "postgres":
+            conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        execute(cur, sql_str, params)
+        rows = cur.fetchall()
+        if storage_kind() == "postgres":
+            cols = [desc[0] for desc in cur.description]
+            return [dict(zip(cols, row)) for row in rows]
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
 
 
 @router.get("/health")
-def api_health() -> Dict[str, str]:
-    return {"status": "ok", "database": "present" if DB_PATH.exists() else "missing"}
+def api_health() -> Dict[str, Any]:
+    return {
+        "status": "ok",
+        "database": "present" if db_available() else "missing",
+        "database_path": backend_label(),
+        "storage": storage_kind(),
+    }
 
 
 @router.get("/metrics/summary")
@@ -60,6 +74,7 @@ def metrics_summary() -> Dict[str, Any]:
         "crisis_flags_vent_table": vent_crises[0]["n"] if vent_crises else 0,
         "avg_mood_intensity": avg[0]["avg"] if avg and avg[0]["avg"] is not None else None,
         "activity_last_7d": activity_7d[0]["n"] if activity_7d else 0,
+        "storage": storage_kind(),
     }
 
 

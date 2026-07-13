@@ -13,6 +13,7 @@ from database import init_db
 
 @pytest.fixture()
 def tmp_db(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     db_file = tmp_path / "test_wellness.db"
     monkeypatch.setenv("DATABASE_PATH", str(db_file))
     db_paths.DATABASE_PATH = Path(db_file)

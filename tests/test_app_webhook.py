@@ -47,3 +47,41 @@ def test_webhook_ignores_non_message(tmp_db, monkeypatch):
     r = _signed_post(client, body, "secret")
     assert r.status_code == 200
     assert r.json()["status"] == "ignored"
+
+
+def _text_message_payload(message_id: str = "wamid.TEST123") -> dict:
+    return {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "value": {
+                            "messages": [
+                                {
+                                    "from": "919900000099",
+                                    "id": message_id,
+                                    "type": "text",
+                                    "text": {"body": "hello"},
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+
+
+def test_webhook_dedup_duplicate_delivery(tmp_db, monkeypatch):
+    monkeypatch.setenv("META_APP_SECRET", "secret")
+    monkeypatch.setattr("app.verify_meta_signature", lambda **kwargs: True)
+    monkeypatch.setattr("app._process_inbound_and_reply", lambda *args: None)
+    client = TestClient(app)
+    body = json.dumps(_text_message_payload("wamid.DUP999")).encode()
+    r1 = _signed_post(client, body, "secret")
+    r2 = _signed_post(client, body, "secret")
+    assert r1.status_code == 200
+    assert r1.json()["status"] == "ok"
+    assert r2.status_code == 200
+    assert r2.json()["status"] == "duplicate"
+

@@ -24,7 +24,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from db_paths import DATABASE_PATH
+from db_paths import DATABASE_PATH, connect, db_available
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = DATABASE_PATH
@@ -104,9 +104,9 @@ def rule_based_intervention(intensity: int, category: str = "other") -> str:
 
 
 def _load_checkins_df() -> pd.DataFrame:
-    if not DB_PATH.exists():
+    if not db_available():
         return pd.DataFrame()
-    with sqlite3.connect(DB_PATH) as conn:
+    with connect() as conn:
         return pd.read_sql_query(
             "SELECT intensity, category, created_at FROM checkins ORDER BY created_at",
             conn,

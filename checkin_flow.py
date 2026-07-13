@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from db_paths import connect
+from db_sql import execute
 from recommender import recommend_intervention
 from sentiment_nlp import detect_crisis, handle_crisis
 from state_store import clear_user_state, get_user_state, set_user_state
@@ -37,12 +38,14 @@ def _save_checkin(user_phone: str, data: Dict[str, Any]) -> None:
 
     conn = connect()
     c = conn.cursor()
-    c.execute(
+    execute(
+        c,
         """INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
            VALUES (?, ?, ?, ?, ?)""",
         (user_phone, "checkin", intensity, datetime.now(), f"[{category}] {note}".strip()),
     )
-    c.execute(
+    execute(
+        c,
         """INSERT INTO checkins (user_phone, intensity, category, note, created_at)
            VALUES (?, ?, ?, ?, ?)""",
         (user_phone, intensity, category, note, datetime.now()),

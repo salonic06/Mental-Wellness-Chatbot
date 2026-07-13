@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import db_paths
+from db_paths import connect
+from db_sql import execute
 
 BASE_DIR = Path(__file__).resolve().parent
 VENT_JSON = BASE_DIR / "vent_instructions.json"
@@ -159,25 +161,27 @@ def log_crisis_dashboard_marker(
     db_path: Optional[str] = None,
 ) -> None:
     """Placeholder rows for dashboard — never stores the user's crisis message text."""
-    db_path = db_path or str(db_paths.DATABASE_PATH)
-    conn = sqlite3.connect(db_path)
+    conn = connect()
     c = conn.cursor()
     now = datetime.now()
     cat = category or "other"
 
     if source == "checkin":
-        c.execute(
+        execute(
+            c,
             """INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
                VALUES (?, ?, ?, ?, ?)""",
             (user_phone, "crisis", intensity, now, f"[{cat}] {CRISIS_NOTE}"),
         )
-        c.execute(
+        execute(
+            c,
             """INSERT INTO checkins (user_phone, intensity, category, note, created_at)
                VALUES (?, ?, ?, ?, ?)""",
             (user_phone, intensity, cat, CRISIS_NOTE, now),
         )
     else:
-        c.execute(
+        execute(
+            c,
             """INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
                VALUES (?, ?, ?, ?, ?)""",
             (user_phone, "crisis", intensity, now, CRISIS_NOTE),
@@ -254,10 +258,10 @@ def log_vent_event(
     source: str = "vent",
     db_path: Optional[str] = None,
 ) -> None:
-    db_path = db_path or str(db_paths.DATABASE_PATH)
-    conn = sqlite3.connect(db_path)
+    conn = connect()
     c = conn.cursor()
-    c.execute(
+    execute(
+        c,
         """INSERT INTO vent_logs
            (user_phone, sentiment_bucket, word_count, is_crisis, source, created_at)
            VALUES (?, ?, ?, ?, ?, ?)""",

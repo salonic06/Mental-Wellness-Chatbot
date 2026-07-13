@@ -1,21 +1,24 @@
 import json
-import sqlite3
 from typing import Any, Dict, Optional
 
-from db_paths import DATABASE_PATH
+from db_paths import DATABASE_PATH, connect
+from db_sql import execute, upsert_conversation_state
 
 _DB = str(DATABASE_PATH)
 
 
 def get_user_state(user_phone: str, db_path: Optional[str] = None) -> Dict[str, Any]:
-    conn = sqlite3.connect(db_path or _DB)
-    c = conn.cursor()
-    c.execute(
-        "SELECT state, data_json FROM conversation_state WHERE user_phone = ?",
-        (user_phone,),
-    )
-    row = c.fetchone()
-    conn.close()
+    conn = connect()
+    try:
+        c = conn.cursor()
+        execute(
+            c,
+            "SELECT state, data_json FROM conversation_state WHERE user_phone = ?",
+            (user_phone,),
+        )
+        row = c.fetchone()
+    finally:
+        conn.close()
     if not row:
         return {"state": "initial", "data": {}}
     state, data_json = row
@@ -29,15 +32,13 @@ def set_user_state(
     data: Optional[Dict[str, Any]] = None,
     db_path: Optional[str] = None,
 ) -> None:
-    conn = sqlite3.connect(db_path or _DB)
-    c = conn.cursor()
-    c.execute(
-        """INSERT OR REPLACE INTO conversation_state (user_phone, state, data_json)
-           VALUES (?, ?, ?)""",
-        (user_phone, state, json.dumps(data or {})),
-    )
-    conn.commit()
-    conn.close()
+    conn = connect()
+    try:
+        c = conn.cursor()
+        upsert_conversation_state(c, user_phone, state, json.dumps(data or {}))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def clear_user_state(user_phone: str, db_path: Optional[str] = None) -> None:

@@ -1,26 +1,26 @@
-"""Admin-only stats from SQLite (Cloud API mode — no Twilio)."""
+"""Admin-only stats from SQLite or Postgres (Cloud API mode — no Twilio)."""
 
 from __future__ import annotations
 
 import os
-import sqlite3
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import db_paths
+from db_sql import execute, is_db_error
 
 
 def fetch_bot_stats() -> Dict[str, Any]:
-    db_path = db_paths.DATABASE_PATH
-    if not db_path.exists():
-        return {"error": "database_missing", "path": str(db_path)}
+    if not db_paths.db_available():
+        return {"error": "database_missing", "path": db_paths.backend_label()}
 
     conn = db_paths.connect()
     try:
         c = conn.cursor()
 
-        def scalar(sql: str, params: tuple = ()) -> int:
-            row = c.execute(sql, params).fetchone()
+        def scalar(sql_str: str, params: tuple = ()) -> int:
+            execute(c, sql_str, params)
+            row = c.fetchone()
             return int(row[0]) if row and row[0] is not None else 0
 
         week_ago = (datetime.now() - timedelta(days=7)).isoformat(timespec="seconds")
@@ -47,13 +47,16 @@ def fetch_bot_stats() -> Dict[str, Any]:
                 "SELECT COUNT(*) FROM vent_logs WHERE created_at >= ?",
                 (week_ago,),
             ),
-            "database_path": str(db_path),
+            "database_path": db_paths.backend_label(),
+            "storage": db_paths.storage_kind(),
             "meditation_nudges": os.environ.get("ENABLE_MEDITATION_NUDGES", "true"),
             "daily_checkin_nudges": os.environ.get("ENABLE_DAILY_CHECKIN_NUDGES", "false"),
         }
         return stats
-    except sqlite3.Error as exc:
-        return {"error": "query_failed", "detail": str(exc)}
+    except Exception as exc:
+        if is_db_error(exc):
+            return {"error": "query_failed", "detail": str(exc)}
+        raise
     finally:
         conn.close()
 
@@ -71,7 +74,7 @@ def format_stats_message(stats: Dict[str, Any]) -> str:
         f"Active meditations: {stats['active_meditations']}\n"
         f"Daily reminders on: {stats['reminders_enabled']}\n"
         f"Activity (7d, approx): {stats['messages_last_7d']} logged events\n"
-        f"DB: {stats['database_path']}\n"
+        f"DB: {stats['database_path']} ({stats.get('storage', 'sqlite')})\n"
         f"Meditation nudges: {stats['meditation_nudges']}\n"
         f"Daily check-in nudges: {stats['daily_checkin_nudges']}"
     )

@@ -147,7 +147,7 @@ def verify_meta_signature(
 def extract_inbound_message(payload: Dict[str, Any]) -> Optional[Dict[str, str]]:
     """
     First inbound user message: text or interactive (button/list reply).
-    Returns {"from", "text"} where text is body or interactive id.
+    Returns {"from", "text", "message_id"?} where text is body or interactive id.
     """
     try:
         entries = payload.get("entry") or []
@@ -158,9 +158,14 @@ def extract_inbound_message(payload: Dict[str, Any]) -> Optional[Dict[str, str]]
                 messages = value.get("messages") or []
                 for msg in messages:
                     wa_from = msg.get("from", "")
+                    message_id = msg.get("id") or ""
                     msg_type = msg.get("type")
                     if msg_type == "text" and "text" in msg:
-                        return {"from": wa_from, "text": msg["text"].get("body", "")}
+                        return {
+                            "from": wa_from,
+                            "text": msg["text"].get("body", ""),
+                            "message_id": message_id,
+                        }
                     if msg_type == "interactive":
                         inter = msg.get("interactive") or {}
                         if inter.get("type") == "button_reply":
@@ -169,6 +174,7 @@ def extract_inbound_message(payload: Dict[str, Any]) -> Optional[Dict[str, str]]
                                 "from": wa_from,
                                 "text": br.get("id", ""),
                                 "interactive": "button",
+                                "message_id": message_id,
                             }
                         if inter.get("type") == "list_reply":
                             lr = inter.get("list_reply") or {}
@@ -176,6 +182,7 @@ def extract_inbound_message(payload: Dict[str, Any]) -> Optional[Dict[str, str]]
                                 "from": wa_from,
                                 "text": lr.get("id", ""),
                                 "interactive": "list",
+                                "message_id": message_id,
                             }
     except Exception:
         logger.exception("Failed to parse inbound WhatsApp payload")

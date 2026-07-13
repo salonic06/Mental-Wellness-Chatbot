@@ -8,3 +8,4 @@ plotly
 scikit-learn
 joblib
 vaderSentiment
+psycopg2-binary

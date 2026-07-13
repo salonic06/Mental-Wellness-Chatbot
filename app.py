@@ -22,6 +22,7 @@ from checkin_nudge_scheduler import start_daily_nudge_scheduler
 from meditation_scheduler import on_meditation_user_message
 from whatsapp_cloud import WhatsAppCloudAPI, extract_inbound_message, verify_meta_signature
 from whatsapp_health import probe_whatsapp_token
+from webhook_dedup import prune_old_claims, try_claim_message
 
 _BASE_DIR = Path(__file__).resolve().parent
 _ENV_PATH = _BASE_DIR / ".env"
@@ -61,7 +62,10 @@ def _start_backup_scheduler() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    logger.info("Database initialized at %s", os.environ.get("DATABASE_PATH", "wellness.db"))
+    prune_old_claims()
+    from db_paths import backend_label, storage_kind
+
+    logger.info("Database initialized (%s, %s)", storage_kind(), backend_label())
     _start_backup_scheduler()
     start_daily_nudge_scheduler()
     wa = probe_whatsapp_token()
@@ -165,6 +169,11 @@ async def webhook_receive(
     inbound = extract_inbound_message(payload)
     if not inbound or not inbound.get("from"):
         return {"status": "ignored"}
+
+    message_id = inbound.get("message_id") or ""
+    if message_id and not try_claim_message(message_id):
+        logger.info("Duplicate webhook ignored (message_id=%s…)", message_id[:12])
+        return {"status": "duplicate"}
 
     sender = _normalize_wa_id(inbound["from"])
     raw = (inbound.get("text") or "").strip()

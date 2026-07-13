@@ -15,7 +15,6 @@ def test_health():
 
 def test_api_metrics(tmp_db, monkeypatch):
     monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
-    monkeypatch.setattr(api_routes, "DB_PATH", tmp_db)
     init_db(str(tmp_db))
     client = TestClient(app)
     summary = client.get("/api/metrics/summary").json()
@@ -25,7 +24,6 @@ def test_api_metrics(tmp_db, monkeypatch):
 def test_api_requires_key_when_set(tmp_db, monkeypatch):
     monkeypatch.setenv("DASHBOARD_API_KEY", "secret-key")
     monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
-    monkeypatch.setattr(api_routes, "DB_PATH", tmp_db)
     init_db(str(tmp_db))
     client = TestClient(app)
     assert client.get("/api/metrics/summary").status_code == 401
@@ -38,7 +36,6 @@ def test_api_requires_key_when_set(tmp_db, monkeypatch):
 
 def test_api_mood_trends(tmp_db, monkeypatch):
     monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
-    monkeypatch.setattr(api_routes, "DB_PATH", tmp_db)
     init_db(str(tmp_db))
     client = TestClient(app)
     body = client.get("/api/metrics/mood-trends").json()
@@ -47,7 +44,6 @@ def test_api_mood_trends(tmp_db, monkeypatch):
 
 def test_api_patterns(tmp_db, monkeypatch):
     monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
-    monkeypatch.setattr(api_routes, "DB_PATH", tmp_db)
     init_db(str(tmp_db))
     client = TestClient(app)
     body = client.get("/api/patterns/insights").json()

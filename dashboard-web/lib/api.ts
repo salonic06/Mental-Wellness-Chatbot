@@ -6,6 +6,7 @@ export type Summary = {
   avg_mood_intensity: number | null;
   activity_last_7d: number;
   crisis_flags_vent_table: number;
+  storage?: "persistent" | "ephemeral" | "postgres";
 };
 
 export type MoodPoint = { day: string; avg_intensity: number; entries: number };

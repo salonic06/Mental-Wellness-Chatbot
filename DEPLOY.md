@@ -8,6 +8,7 @@ This guide covers the **WhatsApp bot**, optional **Streamlit dashboard**, tokens
 |--------|---------------------------|-------------------------------------------------------------|
 | HTTPS URL for Meta webhook | Yes | Yes |
 | SQLite | Ephemeral (resets on **redeploy**) | Persists on 1 GB disk (~$0.25/mo) |
+| **Neon Postgres (free)** | Ephemeral SQLite on Render free | **`DATABASE_URL` on Render free — $0, see [docs/NEON.md](docs/NEON.md)** |
 | Backups | On-instance every 24h (`backups/`) | Same + optional nightly **Cron** job |
 | Streamlit online | `render-dashboard.yaml` (empty DB unless shared disk) | `render.full.yaml` (bot + dashboard share DB) |
 | Cold start | Free service sleeps when idle | Starter plan |

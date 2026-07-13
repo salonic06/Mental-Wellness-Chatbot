@@ -83,3 +83,17 @@ py -m pytest tests/test_llm_eval.py -q
 - Vent logs store **sentiment bucket + word count**, not message content.
 - Dashboard never shows phone numbers or notes in Phase C API.
 - Streamlit `dashboard.py` remains for local deep dives; use Vercel UI for a modern shareable view.
+
+## Empty dashboard / zeros after chatting
+
+Two common causes:
+
+1. **Render free tier (ephemeral DB)** — no `DATABASE_URL` set. Fix: [docs/NEON.md](NEON.md) (free) or `render.with-disk.yaml` (~$7/mo).
+
+2. **What you log depends on how you chat** — casual free-text fills **Conversation tone** (`vent_logs`). **Mood over time** and **Check-in topics** need `/checkin` or `/mood 7 optional note`.
+
+After switching to persistent disk, send a `/checkin` on WhatsApp, then click **Refresh** on the dashboard.
+
+## Duplicate WhatsApp replies
+
+Meta retries webhooks when the server is slow or waking from sleep. The bot deduplicates by WhatsApp `message_id` so each user message is processed once. Redeploy after pulling the latest code if you still see triple replies.

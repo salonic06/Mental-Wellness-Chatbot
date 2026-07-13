@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
 from db_paths import connect
+from db_sql import execute
 from state_store import get_user_state
 from wellness_bot_class import WellnessBot
 from whatsapp_cloud import WhatsAppCloudAPI
@@ -62,7 +63,8 @@ def _still_meditating(user_phone: str) -> bool:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             "SELECT 1 FROM active_meditations WHERE user_phone = ? AND paused = 0",
             (user_phone,),
         )
@@ -75,7 +77,8 @@ def _load_session(user_phone: str) -> Optional[Tuple[str, Optional[datetime], in
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             """SELECT meditation_type, start_time, step_index
                FROM active_meditations WHERE user_phone = ?""",
             (user_phone,),
@@ -92,7 +95,8 @@ def _set_step_index(user_phone: str, step_index: int) -> None:
     conn = connect()
     try:
         c = conn.cursor()
-        c.execute(
+        execute(
+            c,
             "UPDATE active_meditations SET step_index = ? WHERE user_phone = ?",
             (step_index, user_phone),
         )

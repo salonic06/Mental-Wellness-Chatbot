@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 import db_paths
+from db_sql import execute
 import llm_client
 from patterns import patterns_context_block
 
@@ -70,14 +71,16 @@ def _recent_rows(user_phone: str, days: int = 14):
         conn.row_factory = None
         c = conn.cursor()
         since = (datetime.now() - timedelta(days=days)).isoformat()
-        c.execute(
+        execute(
+            c,
             """SELECT intensity, category, note, created_at FROM checkins
                WHERE user_phone = ? AND created_at >= ?
                ORDER BY created_at DESC LIMIT 20""",
             (user_phone, since),
         )
         checkins = c.fetchall()
-        c.execute(
+        execute(
+            c,
             """SELECT intensity, notes, timestamp FROM mood_logs
                WHERE user_phone = ? AND mood != 'crisis' AND timestamp >= ?
                ORDER BY timestamp DESC LIMIT 20""",
@@ -201,14 +204,16 @@ def weekly_stats(user_phone: str) -> dict:
 
     def _avg_count(start: str, end: Optional[str]):
         if end is None:
-            c.execute(
+            execute(
+                c,
                 """SELECT AVG(intensity), COUNT(*) FROM mood_logs
                    WHERE user_phone = ? AND mood != 'crisis'
                      AND intensity IS NOT NULL AND timestamp >= ?""",
                 (user_phone, start),
             )
         else:
-            c.execute(
+            execute(
+                c,
                 """SELECT AVG(intensity), COUNT(*) FROM mood_logs
                    WHERE user_phone = ? AND mood != 'crisis'
                      AND intensity IS NOT NULL
@@ -221,7 +226,8 @@ def weekly_stats(user_phone: str) -> dict:
     this_avg, this_count = _avg_count(week_ago, None)
     last_avg, _ = _avg_count(two_weeks_ago, week_ago)
 
-    c.execute(
+    execute(
+        c,
         """SELECT category, COUNT(*) AS n FROM checkins
            WHERE user_phone = ? AND created_at >= ?
            GROUP BY category ORDER BY n DESC LIMIT 1""",

@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 import logging
 from datetime import datetime
 import random
-import sqlite3
 
 from db_paths import connect
+from db_sql import execute, insert_user_ignore, is_db_error, upsert_active_meditation
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +69,7 @@ class WellnessBot:
         try:
             conn = connect()
             c = conn.cursor()
-            c.execute('INSERT OR IGNORE INTO users (phone_number, joined_date) VALUES (?, ?)',
-                      (phone_number, datetime.now()))
+            insert_user_ignore(c, phone_number, datetime.now())
             conn.commit()
             conn.close()
         except Exception as e:
@@ -98,9 +97,12 @@ class WellnessBot:
 
             conn = connect()
             c = conn.cursor()
-            c.execute('''INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
-                        VALUES (?, ?, ?, ?, ?)''',
-                      (sender, 'mood_log', intensity, datetime.now(), notes))
+            execute(
+                c,
+                """INSERT INTO mood_logs (user_phone, mood, intensity, timestamp, notes)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (sender, "mood_log", intensity, datetime.now(), notes),
+            )
             conn.commit()
             conn.close()
 
@@ -160,11 +162,12 @@ class WellnessBot:
         try:
             conn = connect()
             c = conn.cursor()
-            c.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+            execute(c, "DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
             conn.commit()
             conn.close()
-        except sqlite3.Error as e:
-            logger.error("Error clearing meditation: %s", e)
+        except Exception as e:
+            if is_db_error(e):
+                logger.error("Error clearing meditation: %s", e)
 
     @staticmethod
     def _meditation_script_keys(meditation: dict) -> list:
@@ -201,15 +204,18 @@ class WellnessBot:
         try:
             conn = connect()
             c = conn.cursor()
-            c.execute(
+            execute(
+                c,
                 "SELECT COUNT(*) FROM meditation_sessions WHERE user_phone = ?",
                 (sender,),
             )
             count = int(c.fetchone()[0] or 0)
             conn.close()
             return count
-        except sqlite3.Error:
-            return 0
+        except Exception as e:
+            if is_db_error(e):
+                return 0
+            raise
 
     def _post_exercise_line(self, sender: str, activity: str, fallback: str) -> str:
         try:
@@ -241,21 +247,18 @@ class WellnessBot:
         conn = connect()
         c = conn.cursor()
         try:
-            c.execute(
-                """INSERT OR REPLACE INTO active_meditations
-                   (user_phone, meditation_type, start_time, paused, step_index)
-                   VALUES (?, ?, NULL, 0, 0)""",
-                (sender, meditation_type),
-            )
-            c.execute(
+            upsert_active_meditation(c, sender, meditation_type)
+            execute(
+                c,
                 """INSERT INTO meditation_sessions (user_phone, duration, type, started_at)
                    VALUES (?, ?, ?, ?)""",
                 (sender, selected["duration"], meditation_type, datetime.now()),
             )
             conn.commit()
-        except sqlite3.Error as e:
-            logger.error("Database error logging meditation session: %s", e)
-            conn.rollback()
+        except Exception as e:
+            if is_db_error(e):
+                logger.error("Database error logging meditation session: %s", e)
+                conn.rollback()
         finally:
             conn.close()
 
@@ -279,7 +282,8 @@ class WellnessBot:
         cursor = conn.cursor()
 
         try:
-            cursor.execute(
+            execute(
+                cursor,
                 """SELECT meditation_type, start_time, paused, step_index
                    FROM active_meditations WHERE user_phone = ?""",
                 (sender,),
@@ -293,7 +297,7 @@ class WellnessBot:
             step_index = step_index or 0
             meditation = self.meditations.get(meditation_type)
             if not meditation:
-                cursor.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+                execute(cursor, "DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
                 conn.commit()
                 return f"Error: Meditation type '{meditation_type}' not found."
 
@@ -309,7 +313,7 @@ class WellnessBot:
                 )
 
             if msg == "end":
-                cursor.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
+                execute(cursor, "DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
                 conn.commit()
                 closing = self._post_exercise_line(
                     sender,
@@ -319,15 +323,19 @@ class WellnessBot:
                 return f"{closing}\n\n/mood or /checkin if you want to log how you feel."
 
             if msg == "pause":
-                cursor.execute(
-                    "UPDATE active_meditations SET paused = 1 WHERE user_phone = ?", (sender,)
+                execute(
+                    cursor,
+                    "UPDATE active_meditations SET paused = 1 WHERE user_phone = ?",
+                    (sender,),
                 )
                 conn.commit()
                 return "Paused. Type **resume** or **end**."
 
             if msg == "resume":
-                cursor.execute(
-                    "UPDATE active_meditations SET paused = 0 WHERE user_phone = ?", (sender,)
+                execute(
+                    cursor,
+                    "UPDATE active_meditations SET paused = 0 WHERE user_phone = ?",
+                    (sender,),
                 )
                 conn.commit()
                 return (
@@ -344,8 +352,10 @@ class WellnessBot:
 
                 new_step = 1 if msg == "ready" else step_index + 1
                 if new_step >= len(keys):
-                    cursor.execute(
-                        "DELETE FROM active_meditations WHERE user_phone = ?", (sender,)
+                    execute(
+                        cursor,
+                        "DELETE FROM active_meditations WHERE user_phone = ?",
+                        (sender,),
                     )
                     conn.commit()
                     closing = self._post_exercise_line(
@@ -356,13 +366,15 @@ class WellnessBot:
                     return f"{closing}\n\n/checkin or /mood if you want to capture how you feel."
 
                 if msg == "ready" and not start_time:
-                    cursor.execute(
+                    execute(
+                        cursor,
                         "UPDATE active_meditations SET start_time = ?, step_index = ? "
                         "WHERE user_phone = ?",
                         (datetime.now(), new_step, sender),
                     )
                 else:
-                    cursor.execute(
+                    execute(
+                        cursor,
                         "UPDATE active_meditations SET step_index = ? WHERE user_phone = ?",
                         (new_step, sender),
                     )
@@ -380,9 +392,11 @@ class WellnessBot:
                 "During meditation: **ready** (start) · **next** (next part) · "
                 "**pause** · **resume** · **end** · **status**"
             )
-        except sqlite3.Error as e:
-            logger.error("Database error in handle_meditation_progress: %s", e)
-            return "An error occurred. Please try again later."
+        except Exception as e:
+            if is_db_error(e):
+                logger.error("Database error in handle_meditation_progress: %s", e)
+                return "An error occurred. Please try again later."
+            raise
         finally:
             conn.close()
 
