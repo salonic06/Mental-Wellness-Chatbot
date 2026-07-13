@@ -26,18 +26,17 @@ Redeploy the bot after setting these.
 1. Push this repo to GitHub.
 2. [vercel.com](https://vercel.com) → **Add New Project** → import repo.
 3. Set **Root Directory** to `dashboard-web`.
-4. Environment variable:
+4. **Required** environment variable:
    - `NEXT_PUBLIC_API_URL` = `https://your-bot.onrender.com`
 5. Deploy.
 
+The dashboard uses a **server-side proxy** (`/api/proxy/*`) — the browser never calls Render directly, so CORS is not an issue.
+
 ## 3. Sign in
 
-Open your Vercel URL → enter:
+Open your Vercel URL → enter **Dashboard API key** only (same as `DASHBOARD_API_KEY` on Render).
 
-- **Bot API URL** — Render service URL
-- **Dashboard API key** — same as `DASHBOARD_API_KEY` on Render
-
-The key is stored in `sessionStorage` only (this browser).
+The bot URL comes from `NEXT_PUBLIC_API_URL` on Vercel — you don't type it at login.
 
 ## 4. Local dev
 
