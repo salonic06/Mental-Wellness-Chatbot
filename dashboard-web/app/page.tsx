@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, type Summary, type Patterns } from "@/lib/api";
+import { api, type Summary, type Patterns, type MoodPoint } from "@/lib/api";
 import { MoodChart } from "@/components/MoodChart";
 import { VentChart } from "@/components/VentChart";
 
@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [apiKey, setApiKey] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [moodSeries, setMoodSeries] = useState<{ day: string; avg_intensity: number }[]>([]);
+  const [moodSeries, setMoodSeries] = useState<MoodPoint[]>([]);
   const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
   const [ventBuckets, setVentBuckets] = useState<{ sentiment_bucket: string; count: number }[]>([]);
   const [patterns, setPatterns] = useState<Patterns | null>(null);
