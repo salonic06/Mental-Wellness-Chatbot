@@ -252,6 +252,100 @@ def _fallback_summary(stats: dict) -> str:
     return " ".join(parts)
 
 
+def companion_chat(user_phone: str, text: str, intent: str) -> Optional[str]:
+    """Natural reply when the user sends free text outside a command flow."""
+    context = build_user_context(user_phone)
+    intent_guide = {
+        "greeting": "They said hello or opened the chat. Welcome them warmly and invite them to share how they're doing — one gentle question only.",
+        "thanks": "They thanked you. Acknowledge briefly and leave the door open without being pushy.",
+        "goodbye": "They're signing off. Warm, brief send-off — no new tasks.",
+        "vent_hint": "They hinted at distress. Validate first; gently suggest /vent if they want to talk more (don't force it).",
+        "mood_hint": "They mentioned mood or feelings. Suggest /checkin or /mood naturally.",
+        "open_share": "They shared something substantial without a command. Reflect what you heard; suggest /vent for ongoing conversation.",
+        "unknown": "Casual or unclear message. Be welcoming and invite them to share or use the menu.",
+    }.get(intent, "Be a warm wellness companion.")
+
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + f"Intent: {intent}. {intent_guide}\n\n"
+        f'Their message: "{text}"\n\n'
+        "Reply in 1-3 short sentences. No command lists, no bullet points."
+    )
+    return llm_client.generate(_base_system(), user_prompt, temperature=0.8)
+
+
+def checkin_closing_reply(
+    user_phone: str,
+    intensity: int,
+    category: str,
+    note: str,
+    suggested_tip: str,
+    suggested_cmd: str,
+) -> Optional[str]:
+    """Warm wrap-up after a guided check-in saves."""
+    context = build_user_context(user_phone)
+    note_line = f'Note they added: "{note}".\n' if note else ""
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + f"They just finished a check-in: mood {intensity}/10, topic {category}.\n"
+        + note_line
+        + f"A helpful next step might be: {suggested_tip} ({suggested_cmd}).\n\n"
+        "Write 2-3 warm sentences acknowledging their check-in. Mention the score "
+        "naturally. Offer ONE optional next step in plain language — do not list "
+        "multiple commands or use markdown."
+    )
+    return llm_client.generate(_base_system(), user_prompt, temperature=0.7)
+
+
+def mood_log_reply(user_phone: str, intensity: int, notes: str) -> Optional[str]:
+    """Personalized acknowledgment after /mood."""
+    context = build_user_context(user_phone)
+    notes_line = f'They wrote: "{notes}".\n' if notes else ""
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + f"They logged mood {intensity}/10.\n"
+        + notes_line
+        + "Respond warmly in 2-3 sentences. Validate their feeling. Suggest ONE "
+        "gentle optional next step (vent, breathe, check-in, or meditation) in "
+        "plain language — no slash commands unless natural."
+    )
+    return llm_client.generate(_base_system(), user_prompt, temperature=0.75)
+
+
+def post_session_reflection(user_phone: str, activity: str) -> Optional[str]:
+    """Short closing line after meditation or breathing."""
+    context = build_user_context(user_phone)
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + f"They just finished: {activity}.\n\n"
+        "One or two sentences — acknowledge the pause they took. Optionally ask "
+        "how they feel now. No commands unless one fits naturally."
+    )
+    return llm_client.generate(
+        _base_system(), user_prompt, temperature=0.65, max_tokens=100
+    )
+
+
+def personalized_nudge(user_phone: str) -> Optional[str]:
+    """Morning reminder body when LLM is available."""
+    context = build_user_context(user_phone)
+    if not context:
+        return None
+    user_prompt = (
+        f"{context}\n\n"
+        "Write a brief good-morning check-in nudge (2 sentences max). Reference "
+        "their recent patterns gently — do not quote notes verbatim. Invite a "
+        "/checkin or sharing how they feel. No hashtags."
+    )
+    return llm_client.generate(
+        _base_system(), user_prompt, temperature=0.75, max_tokens=120
+    )
+
+
 def weekly_summary_text(user_phone: str) -> str:
     """
     A friendly weekly reflection. Uses the LLM to narrate the numbers when

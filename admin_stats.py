@@ -84,6 +84,10 @@ def format_ping_message() -> str:
     secret = bool((os.environ.get("META_APP_SECRET") or "").strip())
     display = (os.environ.get("WHATSAPP_DISPLAY_NUMBER") or "").strip()
 
+    from whatsapp_health import probe_whatsapp_token
+
+    wa = probe_whatsapp_token()
+
     lines = [
         "*Config check*",
         f"WHATSAPP_ACCESS_TOKEN: {'set' if token else 'MISSING'}",
@@ -92,8 +96,17 @@ def format_ping_message() -> str:
         f"META_APP_SECRET: {'set' if secret else 'missing'}",
         f"WHATSAPP_DISPLAY_NUMBER: {display or '(not set — wa.me link needs this)'}",
     ]
-    if token and phone_id:
+    if wa.get("configured"):
+        if wa.get("ok"):
+            lines.append("WhatsApp token: valid")
+        else:
+            lines.append(
+                f"WhatsApp token: **{wa.get('detail', 'invalid')}** — renew token on Render"
+            )
+    if token and phone_id and wa.get("ok"):
         lines.append("Ready to send via Cloud API (use /stats for DB counts).")
+    elif token and phone_id:
+        lines.append("Token set but probe failed — messages may stop after a few hours.")
     else:
         lines.append("Cannot send until token + phone number ID are set on Render.")
     return "\n".join(lines)

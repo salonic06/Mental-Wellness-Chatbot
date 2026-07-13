@@ -6,7 +6,7 @@ def test_affirmation(bot):
 def test_mood_log(bot, user_phone):
     bot.start_command("", user_phone)
     msg = bot.log_mood("8 good day", user_phone)
-    assert "thanks" in msg.lower() or "mood" in msg.lower()
+    assert "8/10" in msg or "logged" in msg.lower()
 
 
 def test_invite_requires_display_number(tmp_db, user_phone, monkeypatch):

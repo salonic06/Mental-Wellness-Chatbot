@@ -1,5 +1,5 @@
 {
-  "intro": "I'm here to listen. What's on your mind?\nShare your thoughts and feelings freely. Take your time. 🌸",
+  "intro": "This is your space — say whatever's on your mind, no filter needed.\nI'll listen and respond thoughtfully.",
   "strong_negative": "I hear that you're going through a difficult time. Your feelings are valid and important. 🫂\nWould you like to:\n- Try a calming breathing exercise? (/breathe)\n- Get an uplifting affirmation? (/affirmation)\n- Start a gentle meditation? (/meditate quick)",
   "mild_negative": "I understand this is challenging, and it's good that you're expressing these feelings. 🌸\nSometimes sharing our thoughts can help us process them better.\nWould you like to try:\n- A breathing exercise to help center yourself? (/breathe)\n- Or we can continue talking about it?",
   "strong_positive": "It's wonderful to hear you expressing such positive thoughts! 🌟\nThese moments are worth celebrating and remembering.\nWould you like to:\n- Log this positive mood? (/mood)\n- Or try a meditation to savor these good feelings? (/meditate)",

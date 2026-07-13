@@ -22,10 +22,21 @@ from db_paths import connect
 logger = logging.getLogger(__name__)
 
 NUDGE_MESSAGE = (
-    "Good morning from your Wellness Buddy.\n\n"
-    "How are you today? Reply /checkin for a quick guided check-in, "
-    "or /mood 7 with a short note."
+    "Good morning — how are you starting the day?\n\n"
+    "Reply /checkin for a quick guided check-in, or just tell me how you feel."
 )
+
+
+def _nudge_body(user_phone: str) -> str:
+    try:
+        from llm_wellness import personalized_nudge
+
+        custom = personalized_nudge(user_phone)
+        if custom:
+            return custom + "\n\n/checkin anytime."
+    except Exception:
+        pass
+    return NUDGE_MESSAGE
 
 
 def nudges_enabled() -> bool:
@@ -166,7 +177,7 @@ def run_daily_nudge_tick() -> int:
     local_today = now.date().isoformat()
     sent = 0
     for phone in _users_due_today(local_today):
-        if send_text_sync(phone, NUDGE_MESSAGE):
+        if send_text_sync(phone, _nudge_body(phone)):
             _mark_sent(phone, local_today)
             sent += 1
             logger.info("Daily check-in nudge sent (user_hash=%s)", hash(phone))

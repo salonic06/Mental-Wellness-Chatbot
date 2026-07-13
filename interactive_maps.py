@@ -41,12 +41,12 @@ MAIN_MENU_LIST_SECTIONS = [
     {
         "title": "Wellness",
         "rows": [
-            {"id": "cmd_checkin", "title": "Guided check-in", "description": "Mood + topic"},
-            {"id": "cmd_vent", "title": "Vent", "description": "Share your thoughts"},
-            {"id": "cmd_mood", "title": "Log mood", "description": "Rate 1–10"},
-            {"id": "cmd_meditate", "title": "Meditate", "description": "Quick / medium / long"},
-            {"id": "cmd_breathe", "title": "Breathe", "description": "Calm / relax / energize"},
-            {"id": "cmd_affirmation", "title": "Affirmation", "description": "Positive boost"},
+            {"id": "cmd_checkin", "title": "Check-in", "description": "Mood + what's on your mind"},
+            {"id": "cmd_vent", "title": "Talk it out", "description": "Open conversation space"},
+            {"id": "cmd_mood", "title": "Log mood", "description": "Quick 1–10 + note"},
+            {"id": "cmd_meditate", "title": "Meditate", "description": "3 / 10 / 20 min guided"},
+            {"id": "cmd_breathe", "title": "Breathe", "description": "Calm · relax · energize"},
+            {"id": "cmd_affirmation", "title": "Affirmation", "description": "Personalized boost"},
             {"id": "cmd_analyze", "title": "Mood trends", "description": "Last 7 days"},
         ],
     }

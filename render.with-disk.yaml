@@ -30,6 +30,22 @@ services:
       sizeGB: 1
 
   - type: cron
+    name: wellness-keepalive
+    runtime: python
+    plan: starter
+    schedule: "*/14 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/keep_alive.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: KEEPALIVE_URL
+        fromService:
+          type: web
+          name: mental-wellness-bot
+          property: host
+
+  - type: cron
     name: wellness-db-backup
     runtime: python
     plan: starter

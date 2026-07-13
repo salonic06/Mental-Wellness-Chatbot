@@ -1,6 +1,9 @@
 # Render Blueprint (free-friendly): web service only, ephemeral SQLite.
 # Daily backups: set ENABLE_SCHEDULED_BACKUP=true on the web service.
 # For shared disk + cron job, use render.with-disk.yaml instead.
+#
+# FREE TIER: service sleeps after ~15 min idle. Use UptimeRobot (free) to GET
+# /health every 10 min, or upgrade to starter. See DEPLOY.md → "Bot stops replying".
 
 services:
   - type: web

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from bot_reply import BotReply
 from checkin_flow import handle_checkin_message
+from companion import handle_free_text
 from interactive_maps import (
     BREATHE_BUTTONS,
     CHECKIN_CATEGORY_LIST,
@@ -218,14 +219,10 @@ def process_message(sender: str, raw_text: str) -> BotReply:
     if command in cmd_map:
         reply = _dispatch_command(sender, command, args, session, bot, cmd_map)
     elif command:
-        reply = BotReply("Invalid command. Open the menu or type /help.")
+        reply = BotReply("I didn't catch that command — open the menu or type /help.")
         set_user_state(sender, "initial", session.get("data", {}))
     else:
-        reply = BotReply(
-            "Hi! Open the menu to get started, or type /help.",
-            list_button_label="Open menu",
-            list_sections=MAIN_MENU_LIST_SECTIONS,
-        )
+        reply = handle_free_text(sender, stripped)
         set_user_state(sender, "initial", session.get("data", {}))
 
     return reply if reply.text else BotReply("Type /help for commands.")

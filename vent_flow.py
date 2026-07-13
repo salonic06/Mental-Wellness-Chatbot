@@ -15,7 +15,7 @@ from state_store import clear_user_state, get_user_state, set_user_state
 def start_vent(user_phone: str) -> str:
     set_user_state(user_phone, "venting", {})
     intro = vent_intro()
-    return f"{intro}\n\nType /done when finished, or /cancel to stop."
+    return f"{intro}\n\nJust type what's on your mind. /done when you're ready, /cancel to stop."
 
 
 def handle_vent_message(user_phone: str, text: str) -> Optional[str]:
@@ -57,7 +57,7 @@ def handle_vent_message(user_phone: str, text: str) -> Optional[str]:
         vent_history.append({"role": "assistant", "content": llm_reply})
         session_data["vent_history"] = vent_history[-16:]  # cap stored turns
         set_user_state(user_phone, "venting", session_data)
-        return f"{llm_reply}\n\nShare more, or type /done to finish."
+        return f"{llm_reply}\n\nKeep going if you want — or /done when you're ready."
 
     # Fallback: deterministic sentiment-bucket response.
     reply = response_for_bucket(bucket)

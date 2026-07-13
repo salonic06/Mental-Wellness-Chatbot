@@ -117,7 +117,8 @@ streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server
 |--------|-----|
 | Webhook verify fails | URL must end with `/webhook`; token must match |
 | 401 on send | Refresh or replace `WHATSAPP_ACCESS_TOKEN` — see long-lived token doc |
-| Slow first message | Free tier waking up — retry after 30s |
+| **Bot stops replying after hours** | **Two common causes:** (1) **Free tier sleep** — service spins down after ~15 min idle; Meta webhook may miss the wake window. Fix: [UptimeRobot](https://uptimerobot.com) free monitor pinging `https://YOUR-SERVICE.onrender.com/health` every **10 min**, or upgrade to **Starter**. (2) **Expired token** — temp API Setup tokens die in ~24h; use a **system user long-lived token**. Check `/ping` (admin) or `/health` → `whatsapp.ok`. |
+| Slow first message | Free tier waking up — retry after 30s; keep-alive ping helps |
 | Empty dashboard on Render | Bot DB is separate unless you use `render.full.yaml` |
 | Daily reminder not sent | User must `/remind on`; nudges on; Render awake during **9:00–9:29** (if hour=9, window=30) |
 | Nudge at night | Old logic sent any time after 9:00; fixed to morning window only — redeploy latest code |

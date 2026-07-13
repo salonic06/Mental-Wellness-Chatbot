@@ -58,16 +58,12 @@ class WellnessBot:
 
     def start_command(self, args, sender):
         self._add_user_to_db(sender)  # Add user to the database
-        return ("Welcome to your Mental Wellness Buddy! 🌟\n\n"
-                "I'm here to support your mental well-being. Here's how I can help:\n"
-                "- Track your mood with /mood\n"
-                "- Get guided breathing exercises with /breathe\n"
-                "- Receive daily affirmations with /affirmation\n"
-                "- Start a meditation session with /meditate\n"
-                "- Share your feelings with /vent\n"
-                "- Do a guided check-in with /checkin\n"
-                "- Opt into a daily check-in reminder with /remind on\n"
-                "Type /help anytime to see all commands.")
+        return (
+            "Hey — I'm your wellness companion.\n\n"
+            "I'm here for check-ins, venting, breathing, and quiet moments — "
+            "not therapy, just a steady presence that remembers your mood over time.\n\n"
+            "Tell me how you're doing, or tap the menu below."
+        )
 
     def _add_user_to_db(self, phone_number):
         try:
@@ -82,8 +78,11 @@ class WellnessBot:
 
     def log_mood(self, args, sender):
         if not args:
-            return ("How are you feeling? Rate your mood from 1-10 and add a note:\n"
-                    "Example: /mood 7 feeling optimistic today")
+            return (
+                "How are you feeling? Send a number 1–10, optional note:\n"
+                "Example: /mood 7 quietly hopeful today\n\n"
+                "Or /checkin for a guided version."
+            )
 
         try:
             parts = args.split(' ', 1)
@@ -107,30 +106,32 @@ class WellnessBot:
             conn.commit()
             conn.close()
 
-            response = "Thanks for sharing! 📝\n"
-            if intensity <= 3:
-                response += (
-                    "I'm sorry to hear you're feeling so low.  It's important to reach out for support. Would you like to:\n"
-                    "- Try a breathing exercise? (/breathe)\n"
-                    "- Talk about it? (/vent)\n"
-                    "- Get an affirmation? (/affirmation)")
-            elif intensity <= 5:
-                response += ("I notice you're not feeling your best. Would you like to:\n"
-                             "- Try a breathing exercise? (/breathe)\n"
-                             "- Talk about it? (/vent)\n"
-                             "- Get an affirmation? (/affirmation)")
-            elif intensity <= 7:
-                response += (
-                    "It sounds like you're feeling somewhat down.  Remember that it's okay to not be okay.  Would you like to try a meditation? (/meditate)")
-            else:
-                response += (
-                    "That's great to hear! Let's keep that positive feeling going.  How about trying a guided meditation to enhance your good mood? (/meditate)")
+            try:
+                from llm_wellness import mood_log_reply
 
+                personalized = mood_log_reply(sender, intensity, notes)
+                if personalized:
+                    return personalized
+            except Exception as e:
+                logger.error("Mood log LLM reply failed: %s", e)
 
-            return response
+            if intensity <= 4:
+                return (
+                    f"Logged {intensity}/10 — that's a heavy place to be. "
+                    "Want to talk it through? /vent is a good space for that."
+                )
+            if intensity <= 6:
+                return (
+                    f"Logged {intensity}/10. Be gentle with yourself today. "
+                    "/breathe or /vent might help if you want."
+                )
+            return (
+                f"Logged {intensity}/10 — good to name that. "
+                "Hope the rest of your day has room for more of this."
+            )
 
         except ValueError:
-            return "Invalid input. Please enter a number between 1 and 10 followed by optional notes."
+            return "Use a number 1–10, then an optional note. Example: /mood 7 feeling okay"
         except Exception as e:
             logger.error(f"Error logging mood: {e}")
             return "Sorry, there was an error logging your mood. Please try again later."
@@ -194,6 +195,31 @@ class WellnessBot:
                 return f"\n\nPause ~{gap} minute(s), then type **next** for the following part."
         return "\n\nType **next** when you are ready for the following part."
 
+    def _prior_meditation_count(self, sender: str) -> int:
+        try:
+            conn = connect()
+            c = conn.cursor()
+            c.execute(
+                "SELECT COUNT(*) FROM meditation_sessions WHERE user_phone = ?",
+                (sender,),
+            )
+            count = int(c.fetchone()[0] or 0)
+            conn.close()
+            return count
+        except sqlite3.Error:
+            return 0
+
+    def _post_exercise_line(self, sender: str, activity: str, fallback: str) -> str:
+        try:
+            from llm_wellness import post_session_reflection
+
+            line = post_session_reflection(sender, activity)
+            if line:
+                return line
+        except Exception:
+            pass
+        return fallback
+
     def meditation_guide(self, args, sender):
         if not args.strip():
             options = [
@@ -208,7 +234,7 @@ class WellnessBot:
 
         selected = self.meditations[meditation_type]
         keys = self._meditation_script_keys(selected)
-        intro = selected["script"].get(keys[0], "Let's begin.")
+        returning = self._prior_meditation_count(sender) > 0
 
         conn = connect()
         c = conn.cursor()
@@ -231,13 +257,19 @@ class WellnessBot:
         finally:
             conn.close()
 
+        if returning:
+            return (
+                f"*{selected['duration']}-min {meditation_type} meditation* — "
+                f"{len(keys)} parts.\n\n"
+                "Type **ready** to begin. **next** skips ahead · **pause** / **resume** · **end**"
+            )
+
+        intro = selected["script"].get(keys[0], "Find a comfortable position.")
         return (
             f"{intro}\n\n"
             f"*{selected['duration']}-minute session · {len(keys)} parts*\n"
-            f"Type **ready** to begin — the next parts arrive automatically "
-            f"(~{selected['duration']} min session).\n"
-            "Or type **next** to skip ahead. **pause** / **resume** control timers.\n"
-            "**pause** · **resume** · **end** · **status**"
+            "Type **ready** when you're settled — parts arrive automatically.\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
         )
 
     def handle_meditation_progress(self, message, sender):
@@ -277,7 +309,12 @@ class WellnessBot:
             if msg == "end":
                 cursor.execute("DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
                 conn.commit()
-                return "Meditation ended. Thank you. Type /mood to log how you feel."
+                closing = self._post_exercise_line(
+                    sender,
+                    f"a {meditation['duration']}-minute {meditation_type} meditation",
+                    "Nice work showing up for yourself.",
+                )
+                return f"{closing}\n\n/mood or /checkin if you want to log how you feel."
 
             if msg == "pause":
                 cursor.execute(
@@ -309,10 +346,12 @@ class WellnessBot:
                         "DELETE FROM active_meditations WHERE user_phone = ?", (sender,)
                     )
                     conn.commit()
-                    return (
-                        script.get(keys[-1], "Well done.")
-                        + "\n\nSession complete. Type /mood to log how you feel."
+                    closing = self._post_exercise_line(
+                        sender,
+                        f"a {meditation['duration']}-minute {meditation_type} meditation",
+                        script.get(keys[-1], "Well done."),
                     )
+                    return f"{closing}\n\n/checkin or /mood if you want to capture how you feel."
 
                 if msg == "ready" and not start_time:
                     cursor.execute(
@@ -377,21 +416,21 @@ class WellnessBot:
         return start_checkin(sender)
 
     def help_command(self, args, sender):
-        return """Mental Wellness Buddy Commands:
-/start - Begin your wellness journey
-/checkin - Guided wellness check-in (mood + topic)
-/mood [1-10] [note] - Log mood (optional note)
-/breathe [calm|relaxation|energize] - Breathing exercise
-/meditate [quick|medium|long] - Guided meditation (ready → next → end)
-/affirmation - A personalized affirmation
-/vent - Share what's on your mind; get a supportive reply
-/analyze - 7-day mood average
-/summary - Your weekly wellness reflection
-/remind on|off|status - Daily check-in reminder (optional)
-/cancel - Cancel current flow
-/help - This list
+        return """*Wellness companion*
 
-Admins: /stats · /ping · /invite"""
+Just talk — say hi, share how you feel, or use a command:
+
+/checkin — guided mood + topic
+/vent — open conversation space
+/mood 7 note — quick mood log
+/breathe calm — breathing patterns
+/meditate quick — guided session
+/affirmation — personalized boost
+/summary — your week in words
+/remind on — morning check-in nudge
+/cancel — exit current flow
+
+Tap the menu below for shortcuts."""
 
     def vent_session(self, args, sender):
         from vent_flow import start_vent

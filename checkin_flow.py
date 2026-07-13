@@ -24,9 +24,9 @@ CHECKIN_CATEGORIES = {
 def start_checkin(user_phone: str) -> str:
     set_user_state(user_phone, "checkin_mood", {})
     return (
-        "Let's do a quick wellness check-in.\n\n"
-        "How are you feeling right now? Reply with a number from 1 (very low) to 10 (great).\n\n"
-        "Type /cancel anytime to stop."
+        "Quick check-in — no wrong answers.\n\n"
+        "How are you right now? Reply 1 (really low) to 10 (great).\n\n"
+        "/cancel anytime."
     )
 
 
@@ -112,15 +112,27 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
 
         intensity = int(data["intensity"])
         category = data.get("category", "other")
+        note = data.get("note", "")
         tip, cmd, source = recommend_intervention(
             intensity, category, hour_of_day=datetime.now().hour
         )
-        label = "Personalized suggestion" if source == "ml" else "Suggestion"
+
+        try:
+            from llm_wellness import checkin_closing_reply
+
+            closing = checkin_closing_reply(
+                user_phone, intensity, category, note, tip, cmd
+            )
+            if closing:
+                return closing
+        except Exception:
+            pass
+
+        label = "For you" if source == "ml" else "Suggestion"
         return (
-            f"Check-in saved. Mood: {intensity}/10 | Topic: {category}\n\n"
+            f"Check-in saved — {intensity}/10, mostly about {category}.\n\n"
             f"{label}: {tip}\n\n"
-            f"Try: {cmd}\n"
-            "Or /help for more options."
+            f"When you're ready: {cmd}"
         )
 
     clear_user_state(user_phone)
