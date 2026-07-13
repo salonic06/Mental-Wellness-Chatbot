@@ -7,25 +7,41 @@ const STORAGE_KEY = "wellness_dashboard_key";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [apiUrl, setApiUrl] = useState(
-    process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-  );
+  const botUrl =
+    process.env.NEXT_PUBLIC_API_URL || "https://mental-wellness-bot-d0pv.onrender.com";
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
-      const res = await fetch(`${apiUrl.replace(/\/$/, "")}/api/metrics/summary`, {
+      const res = await fetch("/api/proxy/metrics/summary", {
         headers: { "X-Dashboard-Key": apiKey, Accept: "application/json" },
       });
-      if (!res.ok) throw new Error("Invalid API URL or dashboard key");
+      if (res.status === 401) {
+        throw new Error(
+          "Wrong API key. Copy DASHBOARD_API_KEY exactly from Render → Environment."
+        );
+      }
+      if (!res.ok) {
+        let detail = "Could not reach the bot.";
+        try {
+          const json = await res.json();
+          detail = json.error || detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
       sessionStorage.setItem(STORAGE_KEY, apiKey);
-      sessionStorage.setItem("wellness_api_url", apiUrl);
       router.push("/");
-    } catch {
-      setError("Could not connect. Check bot URL and DASHBOARD_API_KEY.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connection failed.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -34,16 +50,14 @@ export default function LoginPage() {
       <form className="card login-card" onSubmit={onSubmit}>
         <h1 style={{ marginTop: 0 }}>Wellness dashboard</h1>
         <p className="subtitle" style={{ marginBottom: "1.25rem" }}>
-          Connect to your Render bot API. Keys stay in this browser only.
+          Your API key stays in this browser only. Data is fetched server-side via
+          Vercel (no CORS issues).
         </p>
         <div style={{ marginBottom: "1rem" }}>
-          <label htmlFor="url">Bot API URL</label>
-          <input
-            id="url"
-            value={apiUrl}
-            onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="https://your-bot.onrender.com"
-          />
+          <label>Bot API (configured on Vercel)</label>
+          <p style={{ margin: "0.35rem 0 0", fontSize: "0.9rem", wordBreak: "break-all" }}>
+            {botUrl}
+          </p>
         </div>
         <div style={{ marginBottom: "1rem" }}>
           <label htmlFor="key">Dashboard API key</label>
@@ -53,10 +67,17 @@ export default function LoginPage() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Same as DASHBOARD_API_KEY on Render"
+            required
           />
         </div>
-        {error && <div className="error" style={{ marginBottom: "1rem" }}>{error}</div>}
-        <button type="submit">Connect</button>
+        {error && (
+          <div className="error" style={{ marginBottom: "1rem" }}>
+            {error}
+          </div>
+        )}
+        <button type="submit" disabled={loading}>
+          {loading ? "Connecting…" : "Connect"}
+        </button>
       </form>
     </div>
   );

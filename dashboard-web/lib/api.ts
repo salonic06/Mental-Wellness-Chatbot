@@ -1,12 +1,3 @@
-const DEFAULT_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
-function apiBase(): string {
-  if (typeof window !== "undefined") {
-    return sessionStorage.getItem("wellness_api_url") || DEFAULT_BASE;
-  }
-  return DEFAULT_BASE;
-}
-
 export type Summary = {
   users: number;
   mood_logs: number;
@@ -36,28 +27,38 @@ function headers(apiKey: string): HeadersInit {
   return h;
 }
 
-async function get<T>(path: string, apiKey: string): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, {
+/** Calls Vercel server proxy → Render bot (no browser CORS). */
+async function get<T>(proxyPath: string, apiKey: string): Promise<T> {
+  const res = await fetch(`/api/proxy/${proxyPath}`, {
     headers: headers(apiKey),
     cache: "no-store",
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${res.status}: ${text.slice(0, 200)}`);
+    let detail = "";
+    try {
+      const json = await res.json();
+      detail = json.error || JSON.stringify(json);
+    } catch {
+      detail = await res.text();
+    }
+    if (res.status === 401) {
+      throw new Error("Wrong dashboard API key — must match DASHBOARD_API_KEY on Render.");
+    }
+    throw new Error(detail || `Request failed (${res.status})`);
   }
   return res.json();
 }
 
 export const api = {
-  summary: (key: string) => get<Summary>("/api/metrics/summary", key),
+  summary: (key: string) => get<Summary>("metrics/summary", key),
   moodTrends: (key: string, days = 30) =>
-    get<{ series: MoodPoint[] }>(`/api/metrics/mood-trends?days=${days}`, key),
+    get<{ series: MoodPoint[] }>(`metrics/mood-trends?days=${days}`, key),
   categories: (key: string) =>
-    get<{ items: CategoryRow[] }>("/api/metrics/checkin-categories", key),
+    get<{ items: CategoryRow[] }>("metrics/checkin-categories", key),
   ventSentiment: (key: string, days = 30) =>
     get<{ buckets: VentBucket[]; crisis_events: number }>(
-      `/api/vent/sentiment-summary?days=${days}`,
+      `vent/sentiment-summary?days=${days}`,
       key
     ),
-  patterns: (key: string) => get<Patterns>("/api/patterns/insights", key),
+  patterns: (key: string) => get<Patterns>("patterns/insights", key),
 };
