@@ -25,7 +25,8 @@ def _init_postgres() -> None:
             """CREATE TABLE IF NOT EXISTS users (
                    phone_number TEXT PRIMARY KEY,
                    name TEXT,
-                   joined_date TIMESTAMP
+                   joined_date TIMESTAMP,
+                   preferred_language TEXT
                )""",
             """CREATE TABLE IF NOT EXISTS mood_logs (
                    id SERIAL PRIMARY KEY,
@@ -77,6 +78,12 @@ def _init_postgres() -> None:
         ]
         for stmt in statements:
             c.execute(stmt)
+        for stmt in (
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT",
+            "ALTER TABLE vent_logs ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'vent'",
+            "ALTER TABLE active_meditations ADD COLUMN IF NOT EXISTS step_index INTEGER DEFAULT 0",
+        ):
+            c.execute(stmt)
         conn.commit()
     finally:
         conn.close()
@@ -91,7 +98,8 @@ def _init_sqlite(path: str) -> None:
     )
     c.execute(
         """CREATE TABLE IF NOT EXISTS users
-           (phone_number TEXT PRIMARY KEY, name TEXT, joined_date DATE)"""
+           (phone_number TEXT PRIMARY KEY, name TEXT, joined_date DATE,
+            preferred_language TEXT)"""
     )
     c.execute(
         """CREATE TABLE IF NOT EXISTS mood_logs
@@ -117,6 +125,10 @@ def _init_sqlite(path: str) -> None:
            (id INTEGER PRIMARY KEY AUTOINCREMENT, user_phone TEXT, sentiment_bucket TEXT,
             word_count INTEGER, is_crisis INTEGER DEFAULT 0, created_at DATETIME)"""
     )
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN preferred_language TEXT")
+    except sqlite3.OperationalError:
+        pass
     try:
         c.execute("ALTER TABLE meditation_sessions ADD COLUMN started_at DATETIME")
     except sqlite3.OperationalError:

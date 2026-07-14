@@ -6,12 +6,22 @@ from bot_reply import BotReply
 from checkin_flow import handle_checkin_message
 from command_normalize import is_done_signal, normalize_inbound
 from companion import handle_free_text
-from interactive_maps import (
-    BREATHE_BUTTONS,
-    CHAT_FOLLOWUP_BUTTONS,
-    CHECKIN_CATEGORY_LIST,
-    MAIN_MENU_LIST_SECTIONS,
-    MEDITATION_BUTTONS,
+from languages import (
+    detect_language_from_text,
+    LANG_PICKER_MORE_ID,
+    language_picker_reply,
+    language_picker_page2_reply,
+    language_set_message,
+    main_menu_sections,
+    meditation_buttons,
+    breathe_buttons,
+    chat_followup_buttons,
+    checkin_category_list,
+    maybe_auto_set_language,
+    needs_language_setup,
+    parse_language_choice,
+    set_user_language,
+    t,
 )
 from patterns import CHAT_STATES
 from sentiment_nlp import detect_crisis, handle_crisis
@@ -73,10 +83,10 @@ def _dispatch_command(
             set_user_state(sender, "meditating", session.get("data", {}))
             return BotReply(msg)
         set_user_state(sender, "meditation_choose", session.get("data", {}))
-        return BotReply(msg, buttons=MEDITATION_BUTTONS)
+        return BotReply(msg, buttons=meditation_buttons(sender))
 
     if command == "/breathe" and not args.strip():
-        return BotReply(msg, buttons=BREATHE_BUTTONS)
+        return BotReply(msg, buttons=breathe_buttons(sender))
 
     if command in ("/checkin", "/vent"):
         pass
@@ -86,18 +96,25 @@ def _dispatch_command(
         set_user_state(sender, "initial", session.get("data", {}))
 
     if command == "/start":
+        if needs_language_setup(sender):
+            set_user_state(sender, "language_choose", session.get("data", {}))
+            return language_picker_reply(sender)
         return BotReply(
             msg,
-            list_button_label="Wellness menu",
-            list_sections=MAIN_MENU_LIST_SECTIONS,
+            list_button_label=t(sender, "menu_label"),
+            list_sections=main_menu_sections(sender),
         )
 
     if command == "/help":
         return BotReply(
             msg,
-            list_button_label="Quick actions",
-            list_sections=MAIN_MENU_LIST_SECTIONS,
+            list_button_label=t(sender, "help_menu_label"),
+            list_sections=main_menu_sections(sender),
         )
+
+    if command == "/language":
+        set_user_state(sender, "language_choose", session.get("data", {}))
+        return language_picker_reply(sender)
 
     return BotReply(msg)
 
@@ -115,13 +132,26 @@ def _meditate_from_interactive(stripped: str) -> tuple:
     return "", ""
 
 
+def _apply_language_choice(sender: str, choice: str) -> BotReply:
+    lang = parse_language_choice(choice) or "en"
+    set_user_language(sender, lang)
+    clear_user_state(sender)
+    bot = get_bot()
+    msg = bot.start_command("", sender)
+    return BotReply(
+        language_set_message(lang) + "\n\n" + msg,
+        list_button_label=t(sender, "menu_label"),
+        list_sections=main_menu_sections(sender),
+    )
+
+
 def _checkin_reply(sender: str, text: str) -> BotReply:
     msg = handle_checkin_message(sender, text.strip()) or "Type /checkin to start again."
     if get_user_state(sender)["state"] == "checkin_category":
         return BotReply(
             msg,
-            list_button_label="Pick topic",
-            list_sections=CHECKIN_CATEGORY_LIST,
+            list_button_label=t(sender, "checkin_topic_label"),
+            list_sections=checkin_category_list(sender),
         )
     return BotReply(msg)
 
@@ -151,6 +181,25 @@ def process_message(sender: str, raw_text: str) -> BotReply:
 
     session = get_user_state(sender)
     current_state = session["state"]
+
+    maybe_auto_set_language(sender, stripped)
+
+    if stripped == LANG_PICKER_MORE_ID:
+        return language_picker_page2_reply(sender)
+
+    if stripped.startswith("lang_"):
+        parsed = parse_language_choice(stripped)
+        if parsed:
+            return _apply_language_choice(sender, stripped)
+
+    if current_state == "language_choose":
+        parsed = parse_language_choice(stripped)
+        if parsed:
+            return _apply_language_choice(sender, f"lang_{parsed}")
+        detected = detect_language_from_text(stripped)
+        if detected:
+            return _apply_language_choice(sender, f"lang_{detected}")
+        return language_picker_reply(sender)
 
     def _dispatch(cmd: str, args: str = "") -> BotReply:
         if cmd == "/analyze":
@@ -189,7 +238,7 @@ def process_message(sender: str, raw_text: str) -> BotReply:
             return _handle_offer_dispatch(sender, msg, session, bot, cmd_map)
         if msg.startswith("I'm glad you shared") or msg.startswith("Chat paused"):
             return BotReply(msg)
-        return BotReply(msg, buttons=CHAT_FOLLOWUP_BUTTONS)
+        return BotReply(msg, buttons=chat_followup_buttons(sender))
 
     if current_state.startswith("checkin_"):
         return _checkin_reply(sender, stripped)
@@ -207,7 +256,7 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         if command and command in cmd_map:
             bot.clear_active_meditation(sender)
             return _dispatch(command, args)
-        return BotReply("Choose a meditation length:", buttons=MEDITATION_BUTTONS)
+        return BotReply(t(sender, "meditation_choose"), buttons=meditation_buttons(sender))
 
     if current_state == "meditating":
         command, args = bot.get_command_and_args(text_lower)
@@ -228,7 +277,10 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         msg = bot.handle_meditation_progress(text_lower, sender)
         if msg.startswith("You haven't started"):
             set_user_state(sender, "meditation_choose", session.get("data", {}))
-            return BotReply(f"{msg}\n\nChoose a length:", buttons=MEDITATION_BUTTONS)
+            return BotReply(
+                f"{msg}\n\n{t(sender, 'meditation_choose')}",
+                buttons=meditation_buttons(sender),
+            )
         next_state = "initial" if text_lower == "end" else "meditating"
         set_user_state(sender, next_state, session.get("data", {}))
         return BotReply(msg)

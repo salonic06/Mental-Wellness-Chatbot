@@ -12,5 +12,6 @@
   "/stats": "admin_stats_command",
   "/ping": "admin_ping_command",
   "/invite": "admin_invite_command",
-  "/remind": "remind_command"
+  "/remind": "remind_command",
+  "/language": "language_command"
 }

@@ -7,6 +7,8 @@ from state_store import get_user_state
 def test_start_and_help(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
     reply = process_message(user_phone, "/start")
+    assert reply.list_sections is not None
+    reply = process_message(user_phone, "lang_en")
     assert "companion" in reply.text.lower() or "hey" in reply.text.lower()
     assert reply.list_sections is not None
 
@@ -38,6 +40,7 @@ def test_remind_on_off(tmp_db, user_phone, monkeypatch):
 def test_admin_stats(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", user_phone)
     process_message(user_phone, "/start")
+    process_message(user_phone, "lang_en")
     stats = process_message(user_phone, "/stats")
     assert "Bot stats" in stats.text
     ping = process_message(user_phone, "/ping")

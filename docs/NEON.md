@@ -37,7 +37,13 @@ You do **not** need `DATABASE_PATH` when `DATABASE_URL` is set.
 
 **Manual deploy** (or push to GitHub if auto-deploy is on).
 
-On first boot the bot creates all tables automatically.
+On first boot the bot creates all tables automatically (including `users.preferred_language` for multilingual support).
+
+If you created the Neon database **before** the multilingual update, run once in the Neon SQL editor:
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;
+```
 
 ### 3. Verify
 

@@ -42,6 +42,15 @@ def test_api_mood_trends(tmp_db, monkeypatch):
     assert "series" in body
 
 
+def test_api_activity_trends(tmp_db, monkeypatch):
+    monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
+    init_db(str(tmp_db))
+    client = TestClient(app)
+    body = client.get("/api/metrics/activity-trends?days=30").json()
+    assert "series" in body
+    assert "active_users" in body
+
+
 def test_api_patterns(tmp_db, monkeypatch):
     monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
     init_db(str(tmp_db))

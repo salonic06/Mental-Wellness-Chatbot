@@ -60,8 +60,20 @@ STYLE = (
 )
 
 
-def _base_system() -> str:
-    return f"{PERSONA}\n\n{STYLE}"
+def _base_system(user_phone: str = "", hint_text: str = "") -> str:
+    from languages import llm_language_directive
+
+    if user_phone:
+        style = (
+            "Style rules: reply in 2-4 short sentences suitable for WhatsApp. "
+            "Be genuine and specific to what they said. Validate feelings first. "
+            "Ask at most one gentle question. No headings, bullet lists, or markdown. "
+            "Emojis optional and rare. "
+            + llm_language_directive(user_phone, hint_text)
+        )
+    else:
+        style = STYLE
+    return f"{PERSONA}\n\n{style}"
 
 
 def _recent_rows(user_phone: str, days: int = 14):
@@ -164,7 +176,7 @@ def empathetic_vent_reply(
         )
     )
     return llm_client.generate(
-        _base_system(), user_prompt, temperature=0.75, history=history
+        _base_system(user_phone, user_text), user_prompt, temperature=0.75, history=history
     )
 
 
@@ -190,7 +202,7 @@ def personalized_affirmation(user_phone: str) -> Optional[str]:
         "quotation marks, no author attribution."
     )
     return llm_client.generate(
-        _base_system(), user_prompt, temperature=0.85, max_tokens=120
+        _base_system(user_phone), user_prompt, temperature=0.85, max_tokens=120
     )
 
 
@@ -284,7 +296,9 @@ def companion_chat(user_phone: str, text: str, intent: str) -> Optional[str]:
         f'Their message: "{text}"\n\n'
         "Reply in 1-3 short sentences. No command lists, no bullet points."
     )
-    return llm_client.generate(_base_system(), user_prompt, temperature=0.8)
+    return llm_client.generate(
+        _base_system(user_phone, text), user_prompt, temperature=0.8
+    )
 
 
 def checkin_closing_reply(
@@ -308,7 +322,9 @@ def checkin_closing_reply(
         "naturally. Offer ONE optional next step in plain language — phrase it as "
         "a suggestion, not a yes/no question. Do not list multiple commands."
     )
-    return llm_client.generate(_base_system(), user_prompt, temperature=0.7)
+    return llm_client.generate(
+        _base_system(user_phone, note), user_prompt, temperature=0.7
+    )
 
 
 def mood_log_reply(user_phone: str, intensity: int, notes: str) -> Optional[str]:
@@ -324,7 +340,9 @@ def mood_log_reply(user_phone: str, intensity: int, notes: str) -> Optional[str]
         "gentle optional next step (vent, breathe, check-in, or meditation) in "
         "plain language — no slash commands unless natural."
     )
-    return llm_client.generate(_base_system(), user_prompt, temperature=0.75)
+    return llm_client.generate(
+        _base_system(user_phone, notes), user_prompt, temperature=0.75
+    )
 
 
 def post_session_reflection(user_phone: str, activity: str) -> Optional[str]:
@@ -338,7 +356,7 @@ def post_session_reflection(user_phone: str, activity: str) -> Optional[str]:
         "how they feel now. No commands unless one fits naturally."
     )
     return llm_client.generate(
-        _base_system(), user_prompt, temperature=0.65, max_tokens=100
+        _base_system(user_phone), user_prompt, temperature=0.65, max_tokens=100
     )
 
 
@@ -354,7 +372,7 @@ def personalized_nudge(user_phone: str) -> Optional[str]:
         "/checkin or sharing how they feel. No hashtags."
     )
     return llm_client.generate(
-        _base_system(), user_prompt, temperature=0.75, max_tokens=120
+        _base_system(user_phone), user_prompt, temperature=0.75, max_tokens=120
     )
 
 
@@ -397,6 +415,6 @@ def weekly_summary_text(user_phone: str) -> str:
     )
     if patterns:
         user_prompt += f"\n\n{patterns}"
-    llm = llm_client.generate(_base_system(), user_prompt, temperature=0.6)
+    llm = llm_client.generate(_base_system(user_phone), user_prompt, temperature=0.6)
     narrative = llm or "Keep noticing what helps — even small check-ins add up."
     return f"{header}\n\n{narrative}"

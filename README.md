@@ -1,20 +1,20 @@
 # Mental Wellness Chatbot
 
-WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite**, **VADER** vent sentiment, **ML** check-in recommender, **timed meditation nudges**, optional **daily check-in reminders**, and a **Streamlit** dashboard.
+WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite or Neon Postgres**, optional **Gemini LLM**, **VADER** vent sentiment, **ML** check-in recommender, **11 Indian languages**, timed meditation nudges, daily check-in reminders, and a **Next.js** analytics dashboard on Vercel.
 
 ## Architecture
 
 ```
 WhatsApp user
     → Meta Cloud API webhook (POST /webhook)
-    → app.py (signature verify, PII-safe logs)
-    → bot_router.py (state: initial | venting | meditation_choose | meditating | checkin_*)
-    → handlers (wellness_bot_class, vent_flow, checkin_flow, sentiment_nlp)
-    → SQLite wellness.db
+    → app.py (signature verify, message_id dedup, PII-safe logs)
+    → bot_router.py (state + language preference)
+    → handlers (wellness_bot_class, vent_flow, checkin_flow, llm_wellness)
+    → SQLite wellness.db  OR  Neon Postgres (DATABASE_URL)
     ← outbound text via whatsapp_cloud.py
 
-Streamlit dashboard.py  ──reads──►  wellness.db
-GET /api/* (api_routes.py)  ──reads──►  wellness.db   # for future React UI
+Next.js dashboard (Vercel)  ──proxy──►  GET /api/* (api_routes.py)
+Streamlit dashboard.py      ──reads──►  wellness.db   # optional local deep dive
 ```
 
 ## Tech stack
@@ -23,27 +23,31 @@ GET /api/* (api_routes.py)  ──reads──►  wellness.db   # for future Rea
 |--------|------------|
 | API / webhooks | **FastAPI** + **Uvicorn** |
 | WhatsApp | **Meta WhatsApp Cloud API** |
+| LLM (optional) | **Gemini** / OpenAI / OpenRouter via `llm_wellness.py` |
+| Multilingual | Script detection + list picker → `users.preferred_language` |
 | Vent mood NLP | **VADER** (`vaderSentiment`) + wellness lexicon tie-break |
-| Crisis safety | Phrase list → `vent_logs` + `[crisis]` placeholders |
+| Crisis safety | Phrase list → crisis flags + safe reply flow |
 | Check-in ML | **Logistic regression** (scikit-learn) on intensity + category + hour |
 | Timed meditation | `meditation_scheduler.py` (asyncio, after **ready**) |
 | Daily reminders | `checkin_nudge_scheduler.py` (opt-in `/remind on`) |
-| Storage | **SQLite** (`wellness.db`) |
-| Dashboard | **Streamlit** (local or Render via `render.full.yaml`) |
-| CI | GitHub Actions + **pytest** |
+| Storage | **SQLite** locally · **Neon Postgres** in production ([docs/NEON.md](docs/NEON.md)) |
+| Dashboard | **Next.js** on Vercel ([docs/DASHBOARD.md](docs/DASHBOARD.md)) · Streamlit optional |
+| CI | GitHub Actions + **pytest** (74+ tests) |
 
 ## Security & secrets
 
 - **Never commit** `.env` or real API keys (see `.env.example`).
-- Webhook: verify `META_APP_SECRET` signature when set.
+- Webhook: verify `META_APP_SECRET` signature when set; dedupe by WhatsApp `message_id`.
 - Logs: inbound sender is logged as `hash(phone)` only.
-- `/api/*` is read-only and unauthenticated — add auth before any public dashboard URL.
+- Dashboard API: set `DASHBOARD_API_KEY` on Render before sharing the Vercel URL.
 
 ## Local setup
 
 ### 1) Environment
 
 Copy `.env.example` → `.env` and fill in Meta credentials. See [docs/LONG_LIVED_TOKEN.md](docs/LONG_LIVED_TOKEN.md) for a stable Render token.
+
+Optional: set `LLM_PROVIDER=gemini` + `LLM_API_KEY` for AI replies. Leave unset for rule-based fallback.
 
 ### 2) Install
 
@@ -60,7 +64,17 @@ py -m uvicorn app:app --port 8000
 
 Expose with **ngrok** and set Meta webhook to `https://YOUR-URL/webhook`.
 
-### 4) Dashboard
+### 4) Dashboard (Next.js — recommended)
+
+```bash
+cd dashboard-web
+npm install
+npm run dev
+```
+
+Open http://localhost:3000/login. See [docs/DASHBOARD.md](docs/DASHBOARD.md).
+
+**Streamlit** (optional local view):
 
 ```bash
 py -m streamlit run dashboard.py
@@ -70,25 +84,36 @@ py -m streamlit run dashboard.py
 
 ```bash
 py -m pytest -q
+py -m pytest tests/test_llm_eval.py -q   # offline LLM safety eval
 ```
 
 ## WhatsApp commands
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Welcome + register user + menu |
+| `/start` | Welcome + language picker (11 langs) + register user + menu |
+| `/language` | Change language anytime |
 | `/checkin` | Multi-step check-in → ML/rules suggestion |
 | `/mood 7 note` | Log mood; crisis phrases trigger safety flow |
 | `/breathe` | Breathing patterns (buttons or `/breathe calm`) |
 | `/meditate` | quick / medium / long → **ready** → timed parts |
-| `/affirmation` | Random affirmation |
-| `/vent` | Multi-turn vent; VADER sentiment |
+| `/affirmation` | Random affirmation (LLM if configured) |
+| `/vent` | Multi-turn chat; VADER sentiment + optional LLM |
 | `/analyze` | 7-day mood average |
 | `/remind on\|off` | Opt in/out of daily check-in nudge |
 | `/cancel` | Exit current flow |
 | `/help` | Command list |
 
 **Admins** (`ADMIN_NUMBERS`): `/stats`, `/ping`, `/invite` (wa.me link)
+
+### Multilingual (11 Indian languages)
+
+Supported: English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu.
+
+- **`/start`** shows a WhatsApp **list picker** to choose language.
+- **Auto-detect**: typing in a native script sets `preferred_language` automatically.
+- **Hindi** menus are fully localized; other languages use English menus with **LLM replies in the user's language** when Gemini is enabled.
+- Preference is stored in Postgres/SQLite for all future conversations.
 
 ### Meditation flow
 
@@ -98,9 +123,9 @@ py -m pytest -q
 
 Requires an always-on host (e.g. Render) with `ENABLE_MEDITATION_NUDGES=true`.
 
-### Vent flow
+### Vent / chat flow
 
-1. `/vent` → share text → VADER reply + `(Detected tone: …)`  
+1. `/vent` or menu → share text → VADER reply (+ LLM if configured)  
 2. `/done` or buttons to exit  
 
 ## Invite a friend (development demo)
@@ -123,30 +148,41 @@ py scripts/seed_demo_data.py
 
 ```
 app.py                      # FastAPI webhook + schedulers
-bot_router.py               # State machine
+bot_router.py               # State machine + language routing
+languages.py                # Picker, script detection, UI strings
+llm_wellness.py             # Optional Gemini/OpenAI brain
+webhook_dedup.py            # WhatsApp message_id deduplication
+database.py                 # SQLite + Postgres dual backend
 meditation_scheduler.py     # Timed meditation parts
 checkin_nudge_scheduler.py  # Daily /remind pushes
 whatsapp_cloud.py           # Cloud API send/verify
 wellness_bot_class.py       # Command handlers
-dashboard.py                # Streamlit
-archive/                    # Legacy Flask/Twilio (reference only)
-docs/LONG_LIVED_TOKEN.md
+api_routes.py               # Dashboard metrics API
+dashboard-web/              # Next.js dashboard (Vercel)
+dashboard.py                # Streamlit (optional)
+docs/NEON.md                # Free Postgres setup
+docs/DASHBOARD.md           # Vercel dashboard guide
 ```
 
-## Deploy (Render)
+## Deploy
+
+| Target | Guide |
+|--------|--------|
+| Bot (Render) | [DEPLOY.md](DEPLOY.md) |
+| DB (Neon, free) | [docs/NEON.md](docs/NEON.md) |
+| Dashboard (Vercel) | [docs/DASHBOARD.md](docs/DASHBOARD.md) |
 
 | Blueprint | Purpose |
 |-----------|---------|
 | [render.yaml](render.yaml) | Bot only (free) |
-| [render.with-disk.yaml](render.with-disk.yaml) | Bot + persistent DB |
+| [render.with-disk.yaml](render.with-disk.yaml) | Bot + persistent SQLite disk |
 | [render.full.yaml](render.full.yaml) | Bot + Streamlit + disk |
-| [render-dashboard.yaml](render-dashboard.yaml) | Streamlit only |
 
-Full guide: **[DEPLOY.md](DEPLOY.md)**
+**Recommended for beta:** Render free bot + Neon `DATABASE_URL` + Vercel dashboard ≈ **$0/month**.
 
 ## Interactive UI
 
-Buttons/lists for meditate, breathe, check-in category, vent follow-ups, and main menu after `/start`.
+Buttons/lists for language, meditate, breathe, check-in category, vent follow-ups, and main menu after `/start`.
 
 ## Roadmap
 
@@ -156,7 +192,8 @@ Buttons/lists for meditate, breathe, check-in category, vent follow-ups, and mai
 4. ~~Timed meditation pushes~~  
 5. ~~Daily check-in reminders (`/remind`)~~  
 6. ~~Tests + CI~~  
-7. ~~Streamlit on Render~~ → `render.full.yaml`  
-8. ~~**Next.js dashboard** consuming `/api/*`~~ → [docs/DASHBOARD.md](docs/DASHBOARD.md) (`dashboard-web/`)  
-9. ~~Optional **GenAI** summaries + **LLM eval harness**~~ → `llm_wellness.py` + `llm_eval_harness.py`  
-10. Meta **production** access (beyond tester list)  
+7. ~~Next.js dashboard on Vercel~~ → [docs/DASHBOARD.md](docs/DASHBOARD.md)  
+8. ~~Neon Postgres persistence~~ → [docs/NEON.md](docs/NEON.md)  
+9. ~~Optional LLM + eval harness~~ → `llm_wellness.py` + `tests/test_llm_eval.py`  
+10. ~~Multilingual (11 Indian languages)~~  
+11. Meta **production** access (beyond tester list)  

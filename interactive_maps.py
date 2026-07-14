@@ -31,6 +31,10 @@ INTERACTIVE_TO_TEXT: Dict[str, str] = {
     "cat_other": "other",
 }
 
+for _code in ("en", "hi", "bn", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ur"):
+    INTERACTIVE_TO_TEXT[f"lang_{_code}"] = f"lang_{_code}"
+INTERACTIVE_TO_TEXT["lang_picker_more"] = "lang_picker_more"
+
 MAIN_MENU_BUTTONS: List[Button] = [
     ("cmd_checkin", "Check-in"),
     ("cmd_vent", "Vent"),

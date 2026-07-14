@@ -136,6 +136,52 @@ def vent_sentiment_summary(days: int = 30) -> Dict[str, Any]:
     }
 
 
+@router.get("/metrics/activity-trends")
+def activity_trends(days: int = 30) -> Dict[str, Any]:
+    """Daily event counts (mood + check-in + chat tone logs) — all users, anonymous."""
+    days = max(7, min(days, 90))
+    since = (datetime.now() - timedelta(days=days)).isoformat()
+    rows = _query(
+        """
+        SELECT day, SUM(events) AS events FROM (
+            SELECT date(timestamp) AS day, COUNT(*) AS events
+            FROM mood_logs
+            WHERE mood != 'crisis' AND timestamp >= ?
+            GROUP BY date(timestamp)
+            UNION ALL
+            SELECT date(created_at) AS day, COUNT(*) AS events
+            FROM checkins
+            WHERE created_at >= ?
+            GROUP BY date(created_at)
+            UNION ALL
+            SELECT date(created_at) AS day, COUNT(*) AS events
+            FROM vent_logs
+            WHERE is_crisis = 0 AND created_at >= ?
+            GROUP BY date(created_at)
+        ) AS combined
+        GROUP BY day
+        ORDER BY day ASC
+        """,
+        (since, since, since),
+    )
+    active = _query(
+        """
+        SELECT COUNT(DISTINCT user_phone) AS n FROM (
+            SELECT user_phone FROM mood_logs WHERE timestamp >= ?
+            UNION SELECT user_phone FROM checkins WHERE created_at >= ?
+            UNION SELECT user_phone FROM vent_logs WHERE created_at >= ?
+        ) AS u
+        """,
+        (since, since, since),
+    )
+    return {
+        "days": days,
+        "series": rows,
+        "active_users": active[0]["n"] if active else 0,
+        "total_events": sum(r["events"] for r in rows),
+    }
+
+
 @router.get("/patterns/insights")
 def patterns_insights(days: int = 14) -> Dict[str, Any]:
     return global_insights(days=days)

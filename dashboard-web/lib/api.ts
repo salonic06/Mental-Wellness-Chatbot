@@ -10,6 +10,7 @@ export type Summary = {
 };
 
 export type MoodPoint = { day: string; avg_intensity: number; entries: number };
+export type ActivityPoint = { day: string; events: number };
 export type CategoryRow = { category: string; count: number };
 export type VentBucket = { sentiment_bucket: string; count: number };
 export type Patterns = {
@@ -22,13 +23,19 @@ export type Patterns = {
   insights: string[];
 };
 
+export type ActivityTrends = {
+  days: number;
+  series: ActivityPoint[];
+  active_users: number;
+  total_events: number;
+};
+
 function headers(apiKey: string): HeadersInit {
   const h: HeadersInit = { Accept: "application/json" };
   if (apiKey) h["X-Dashboard-Key"] = apiKey;
   return h;
 }
 
-/** Calls Vercel server proxy → Render bot (no browser CORS). */
 async function get<T>(proxyPath: string, apiKey: string): Promise<T> {
   const res = await fetch(`/api/proxy/${proxyPath}`, {
     headers: headers(apiKey),
@@ -54,6 +61,8 @@ export const api = {
   summary: (key: string) => get<Summary>("metrics/summary", key),
   moodTrends: (key: string, days = 30) =>
     get<{ series: MoodPoint[] }>(`metrics/mood-trends?days=${days}`, key),
+  activityTrends: (key: string, days = 30) =>
+    get<ActivityTrends>(`metrics/activity-trends?days=${days}`, key),
   categories: (key: string) =>
     get<{ items: CategoryRow[] }>("metrics/checkin-categories", key),
   ventSentiment: (key: string, days = 30) =>
@@ -61,5 +70,6 @@ export const api = {
       `vent/sentiment-summary?days=${days}`,
       key
     ),
-  patterns: (key: string) => get<Patterns>("patterns/insights", key),
+  patterns: (key: string, days = 14) =>
+    get<Patterns>(`patterns/insights?days=${days}`, key),
 };

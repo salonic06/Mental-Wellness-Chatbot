@@ -123,13 +123,15 @@ def _chat_followup_buttons() -> list[Button]:
 
 def handle_free_text(user_phone: str, text: str) -> BotReply:
     """Route casual inbound text — auto-enter chat for emotional/open messages."""
+    from languages import main_menu_sections, chat_followup_buttons, t
+
     intent = classify_free_text(text)
 
     if intent == "empty":
         return BotReply(
-            "I'm here — what's on your mind?",
-            list_button_label="Wellness menu",
-            list_sections=_menu_sections(),
+            t(user_phone, "welcome", hint_text=text),
+            list_button_label=t(user_phone, "menu_label"),
+            list_sections=main_menu_sections(user_phone),
         )
 
     if intent in AUTO_CHAT_INTENTS:
@@ -137,9 +139,8 @@ def handle_free_text(user_phone: str, text: str) -> BotReply:
 
         enter_chat(user_phone)
         msg = handle_chat_message(user_phone, text) or "Tell me more."
-        return BotReply(msg, buttons=_chat_followup_buttons())
+        return BotReply(msg, buttons=chat_followup_buttons(user_phone))
 
-    # Short affirmatives without pending offer → enter chat to continue thread
     from session_offers import get_pending_offer, is_affirmative
 
     if is_affirmative(text) and not get_pending_offer(user_phone):
@@ -147,24 +148,31 @@ def handle_free_text(user_phone: str, text: str) -> BotReply:
 
         enter_chat(user_phone)
         msg = handle_chat_message(user_phone, text) or "Tell me more."
-        return BotReply(msg, buttons=_chat_followup_buttons())
+        return BotReply(msg, buttons=chat_followup_buttons(user_phone))
 
     msg = companion_reply(user_phone, text, intent)
 
     if intent == "mood_hint":
+        from languages import effective_language, MENU_ROWS
+
+        lang = effective_language(user_phone, text)
+        week_label = next(
+            (r["title"] for r in MENU_ROWS[lang] if r["id"] == "cmd_summary"),
+            "My week",
+        )
         return BotReply(
             msg,
             buttons=[
                 ("cmd_checkin", "Check-in"),
                 ("cmd_breathe", "Breathe"),
-                ("cmd_summary", "My week"),
+                ("cmd_summary", week_label),
             ],
         )
     if intent in ("greeting", "unknown"):
         return BotReply(
             msg,
-            list_button_label="Wellness menu",
-            list_sections=_menu_sections(),
+            list_button_label=t(user_phone, "menu_label"),
+            list_sections=main_menu_sections(user_phone),
         )
     return BotReply(msg)
 

@@ -57,13 +57,10 @@ class WellnessBot:
 
 
     def start_command(self, args, sender):
-        self._add_user_to_db(sender)  # Add user to the database
-        return (
-            "Hey — I'm your wellness companion.\n\n"
-            "I'm here for check-ins, venting, breathing, and quiet moments — "
-            "not therapy, just a steady presence that remembers your mood over time.\n\n"
-            "Tell me how you're doing, or tap the menu below."
-        )
+        self._add_user_to_db(sender)
+        from languages import t
+
+        return t(sender, "welcome")
 
     def _add_user_to_db(self, phone_number):
         try:
@@ -432,16 +429,15 @@ class WellnessBot:
         return start_checkin(sender)
 
     def help_command(self, args, sender):
-        return (
-            "I'm your wellness companion — talk naturally or tap the menu.\n\n"
-            "Common shortcuts:\n"
-            "• /checkin — guided mood log\n"
-            "• Just talk — I'll listen (same as /vent)\n"
-            "• /summary — your week + patterns\n"
-            "• /breathe calm · /meditate quick · /affirmation\n"
-            "• /done — pause an open chat\n\n"
-            "Tap *Quick actions* below."
-        )
+        from languages import t
+
+        return t(sender, "help")
+
+    def language_command(self, args, sender):
+        """Handled in bot_router with language picker UI."""
+        from languages import t
+
+        return t(sender, "language_pick")
 
     def vent_session(self, args, sender):
         from chat_flow import start_chat

@@ -6,8 +6,8 @@ Modern analytics UI for your wellness bot. Reads **aggregated** data only — mo
 
 ```
 WhatsApp bot (Render)          Next.js dashboard (Vercel)
-FastAPI /api/*  ◄── HTTPS ────  dashboard-web/
-SQLite wellness.db              Charts + pattern insights
+FastAPI /api/*  ◄── proxy ────  dashboard-web/
+SQLite or Neon Postgres         Aggregated charts + beta snapshot
 ```
 
 ## 1. Secure the bot API (Render)
@@ -56,15 +56,31 @@ npm run dev
 
 Open http://localhost:3000/login (leave API key empty if `DASHBOARD_API_KEY` unset locally).
 
+## What the UI shows (interview-friendly)
+
+Designed for **aggregated, anonymous** beta demos — no phone numbers or message text.
+
+| Section | What it proves |
+|---------|----------------|
+| **7 / 30 / 90 day range** | You can slice trends for beta reviews |
+| **Beta snapshot** | Registered users, active users, events, avg mood in one line |
+| **Daily activity chart** | Combined check-ins + mood + chat tone entries per day |
+| **Metric cards** | Users, check-ins, chat sessions, events in range |
+| **Mood over time** | Daily average mood series |
+| **Conversation tone** | VADER sentiment buckets only |
+| **Check-in topics** | Category counts |
+| **Pattern insights** | Rule-based lines + crisis flag count |
+
 ## API endpoints
 
 | Route | Data |
 |-------|------|
-| `GET /api/metrics/summary` | Totals, avg mood |
-| `GET /api/metrics/mood-trends` | Daily mood series |
+| `GET /api/metrics/summary` | Totals, storage type (sqlite/postgres/ephemeral) |
+| `GET /api/metrics/mood-trends?days=30` | Daily mood series |
+| `GET /api/metrics/activity-trends?days=30` | Daily events + active users |
 | `GET /api/metrics/checkin-categories` | Topic breakdown |
-| `GET /api/vent/sentiment-summary` | Tone buckets (no text) |
-| `GET /api/patterns/insights` | Pattern lines |
+| `GET /api/vent/sentiment-summary?days=30` | Tone buckets (no text) |
+| `GET /api/patterns/insights?days=30` | Pattern lines + avg mood |
 
 All require header `X-Dashboard-Key` when `DASHBOARD_API_KEY` is set.
 
@@ -93,6 +109,14 @@ Two common causes:
 2. **What you log depends on how you chat** — casual free-text fills **Conversation tone** (`vent_logs`). **Mood over time** and **Check-in topics** need `/checkin` or `/mood 7 optional note`.
 
 After switching to persistent disk, send a `/checkin` on WhatsApp, then click **Refresh** on the dashboard.
+
+## Dashboard still looks like the old UI?
+
+The v2 layout (7/30/90d pills, **Beta snapshot**, **Daily activity** chart) lives in `dashboard-web/`. Vercel must deploy from commit `19242f4` or later with **Root Directory** = `dashboard-web`.
+
+1. Vercel → your project → **Deployments** → confirm latest commit hash.
+2. If stale, **Redeploy** (or push a new commit).
+3. Hard refresh the browser (Ctrl+Shift+R). Footer should show **Dashboard v2**.
 
 ## Duplicate WhatsApp replies
 

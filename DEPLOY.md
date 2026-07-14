@@ -44,6 +44,10 @@ Repo must be on GitHub (already synced).
 | `ENABLE_DAILY_CHECKIN_NUDGES` | No | `true` on Render blueprint |
 | `DAILY_NUDGE_HOUR` | No | `9` (send window starts at this hour in `TIMEZONE`) |
 | `DAILY_NUDGE_WINDOW_MINUTES` | No | `30` (only sends in the first N minutes of that hour, e.g. 9:00–9:29 IST) |
+| `DATABASE_URL` | No | Neon Postgres pooled URL — see [docs/NEON.md](docs/NEON.md) |
+| `LLM_PROVIDER` | No | `gemini` (or `none` for rule-based only) |
+| `LLM_API_KEY` | No | Gemini API key when LLM enabled |
+| `DASHBOARD_API_KEY` | No | Required for Vercel dashboard — see [docs/DASHBOARD.md](docs/DASHBOARD.md) |
 
 Do **not** upload `.env` to git.
 
@@ -160,7 +164,7 @@ They save your test business number from API Setup and message it like any conta
 
 ### Step C — First message
 
-They type **`/start`** and use **Open menu** or slash commands (`/checkin`, `/vent`, `/meditate quick`, etc.).
+They type **`/start`**, pick a **language** from the list (or type in Hindi/Tamil/etc. to auto-detect), then use **Open menu** or slash commands (`/checkin`, `/vent`, `/meditate quick`, `/language`, etc.).
 
 ### What you maintain
 
