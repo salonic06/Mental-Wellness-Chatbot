@@ -68,6 +68,7 @@ Designed for **aggregated, anonymous** beta demos — no phone numbers or messag
 | **Metric cards** | Users, check-ins, chat sessions, events in range |
 | **Mood over time** | Daily average mood series |
 | **Conversation tone** | VADER sentiment buckets only |
+| **Chat impact** | Optional pre/post mood (1–10) on Talk it out → avg Δ, % improved |
 | **Check-in topics** | Category counts |
 | **Pattern insights** | Rule-based lines + crisis flag count |
 
@@ -80,6 +81,7 @@ Designed for **aggregated, anonymous** beta demos — no phone numbers or messag
 | `GET /api/metrics/activity-trends?days=30` | Daily events + active users |
 | `GET /api/metrics/checkin-categories` | Topic breakdown |
 | `GET /api/vent/sentiment-summary?days=30` | Tone buckets (no text) |
+| `GET /api/metrics/chat-impact?days=30` | Pre/post chat mood outcomes |
 | `GET /api/patterns/insights?days=30` | Pattern lines + avg mood |
 
 All require header `X-Dashboard-Key` when `DASHBOARD_API_KEY` is set.

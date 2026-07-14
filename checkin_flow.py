@@ -134,7 +134,7 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
 
                 text = closing + hint
                 enter_chat_with_context(
-                    user_phone, text, pending_offer=tip_offer
+                    user_phone, text, pending_offer=tip_offer, pre_intensity=intensity
                 )
                 return text
         except Exception:
@@ -151,7 +151,7 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
             from chat_flow import enter_chat_with_context
 
             enter_chat_with_context(
-                user_phone, plain, pending_offer=tip_offer
+                user_phone, plain, pending_offer=tip_offer, pre_intensity=intensity
             )
         except Exception:
             pass

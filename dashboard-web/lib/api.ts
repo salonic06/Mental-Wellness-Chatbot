@@ -30,6 +30,20 @@ export type ActivityTrends = {
   total_events: number;
 };
 
+export type ChatImpact = {
+  days: number;
+  sessions_opened: number;
+  sessions_closed: number;
+  sessions_with_both_scores: number;
+  improved: number;
+  worsened: number;
+  unchanged: number;
+  pct_improved: number | null;
+  avg_mood_delta: number | null;
+  avg_pre: number | null;
+  avg_post: number | null;
+};
+
 function headers(apiKey: string): HeadersInit {
   const h: HeadersInit = { Accept: "application/json" };
   if (apiKey) h["X-Dashboard-Key"] = apiKey;
@@ -72,4 +86,6 @@ export const api = {
     ),
   patterns: (key: string, days = 14) =>
     get<Patterns>(`patterns/insights?days=${days}`, key),
+  chatImpact: (key: string, days = 30) =>
+    get<ChatImpact>(`metrics/chat-impact?days=${days}`, key),
 };

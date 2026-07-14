@@ -35,9 +35,11 @@ def test_language_slash_with_name(tmp_db, user_phone, monkeypatch):
 
 def test_vent_intro_uses_locale(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     set_user_language(user_phone, "hi")
     reply = process_message(user_phone, "/vent")
-    assert "जगह" in reply.text or "likhiye" in reply.text.lower() or "लिख" in reply.text
+    assert "जगह" in reply.text or "महसूस" in reply.text or "लिख" in reply.text
+    assert get_user_state(user_phone)["state"] == "chat_pre_mood"
 
 
 def test_breathe_uses_locale(tmp_db, user_phone, monkeypatch):
@@ -141,7 +143,9 @@ def test_vent_while_already_chatting_is_warm(tmp_db, user_phone, monkeypatch):
         "llm_wellness.chat_already_open_reply",
         lambda phone: "I'm still right here with you — go ahead.",
     )
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     process_message(user_phone, "/vent")
+    process_message(user_phone, "5")
     assert get_user_state(user_phone)["state"] == "chatting"
     reply = process_message(user_phone, "cmd_vent")
     assert "Keep sharing" not in reply.text
@@ -159,6 +163,7 @@ def test_start_chat_open_avoids_command_footer(tmp_db, user_phone, monkeypatch):
     assert "This is your space" not in reply.text
     assert "/done" not in reply.text
     assert "I'm here with you" in reply.text
+    assert get_user_state(user_phone)["state"] == "chat_pre_mood"
 
 
 def test_analyze_routes_to_summary(tmp_db, user_phone, monkeypatch):

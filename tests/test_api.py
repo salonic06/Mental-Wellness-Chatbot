@@ -57,3 +57,20 @@ def test_api_patterns(tmp_db, monkeypatch):
     client = TestClient(app)
     body = client.get("/api/patterns/insights").json()
     assert "insights" in body
+
+
+def test_api_chat_impact(tmp_db, monkeypatch):
+    monkeypatch.setattr(db_paths, "DATABASE_PATH", tmp_db)
+    init_db(str(tmp_db))
+    from session_outcomes import close_chat_outcome, open_chat_outcome, set_pre_mood
+
+    oid = open_chat_outcome("919900000099", source="chat")
+    assert oid
+    set_pre_mood(oid, 4)
+    close_chat_outcome(oid, post_intensity=7)
+    client = TestClient(app)
+    body = client.get("/api/metrics/chat-impact?days=30").json()
+    assert body["sessions_with_both_scores"] >= 1
+    assert body["avg_mood_delta"] == 3
+    assert body["improved"] >= 1
+    assert body["pct_improved"] is not None

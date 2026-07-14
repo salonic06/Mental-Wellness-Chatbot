@@ -29,7 +29,9 @@ def test_enabled_requires_key(monkeypatch):
 def test_vent_uses_llm_when_available(tmp_db, user_phone, monkeypatch):
     from vent_flow import handle_vent_message, start_vent
 
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     start_vent(user_phone)
+    handle_vent_message(user_phone, "skip")
     monkeypatch.setattr(
         llm_client, "generate", lambda *a, **k: "I hear how heavy that felt today."
     )
@@ -42,7 +44,9 @@ def test_vent_falls_back_without_llm(tmp_db, user_phone, monkeypatch):
     _clear_llm_env(monkeypatch)
     from vent_flow import handle_vent_message, start_vent
 
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     start_vent(user_phone)
+    handle_vent_message(user_phone, "skip")
     reply = handle_vent_message(user_phone, "Work was horrible today")
     assert "Tone:" in reply  # deterministic fallback preserved
 
@@ -99,7 +103,9 @@ def test_llm_crisis_sentinel_routes_to_crisis(tmp_db, user_phone, monkeypatch):
     """If the model flags risk the phrase list missed, we show crisis resources."""
     from vent_flow import handle_vent_message, start_vent
 
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     start_vent(user_phone)
+    handle_vent_message(user_phone, "skip")
     monkeypatch.setattr(
         "llm_wellness.empathetic_vent_reply",
         lambda *a, **k: "[[CRISIS]]",

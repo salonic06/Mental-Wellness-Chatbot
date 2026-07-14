@@ -212,6 +212,10 @@ def process_message(sender: str, raw_text: str) -> BotReply:
             msg = bot.handle_meditation_progress("end", sender)
             set_user_state(sender, "initial", session.get("data", {}))
             return BotReply(msg)
+        if current_state == "chat_post_mood":
+            from chat_flow import handle_post_mood
+
+            return BotReply(handle_post_mood(sender, "skip"))
         if is_chatting(sender) or current_state in CHAT_STATES:
             msg = handle_chat_message(sender, "/done") or t(sender, "router_chat_paused")
             return BotReply(msg)
@@ -221,6 +225,12 @@ def process_message(sender: str, raw_text: str) -> BotReply:
     offer_reply = try_fulfill_offer(sender, stripped, _dispatch)
     if offer_reply:
         return offer_reply
+
+    if current_state in ("chat_pre_mood", "chat_post_mood"):
+        msg = handle_chat_message(sender, stripped) or ""
+        if current_state == "chat_pre_mood" and get_user_state(sender)["state"] == "chatting":
+            return BotReply(msg, buttons=chat_followup_buttons(sender))
+        return BotReply(msg)
 
     if is_chatting(sender) or current_state in CHAT_STATES:
         command, args = bot.get_command_and_args(text_lower)

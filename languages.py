@@ -103,6 +103,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         ),
         "chat_cancel": "Okay — I'm here whenever you want to pick this back up.",
         "chat_keep_going": "I'm still here — take your time.",
+        "chat_pre_mood_ask": "Quick pulse before we talk — how are you feeling right now, from 1 (low) to 10 (great)?",
+        "chat_post_mood_ask": "Thanks for sharing. How do you feel now, from 1 to 10?",
+        "chat_mood_skip_hint": "Reply with a number, or type skip.",
+        "chat_mood_invalid": "Please reply with a whole number from 1 to 10, or skip.",
+        "chat_pre_mood_ack": "Got it — I'm listening. What's on your mind?",
+        "chat_impact_up": "Nice — that was a +{delta} shift from when you started.",
+        "chat_impact_down": "Thanks for rating — a {delta}-point dip is honest data; be gentle with yourself.",
+        "chat_impact_same": "Same score as when you started — showing up still counts.",
         "breathe_choose": (
             "Pick a pattern — each shows timing and about how long it takes.\n\n"
             "Tap a button below, or send /breathe calm | relaxation | energize"
@@ -222,6 +230,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_done": "शेयर करने के लिए धन्यवाद। /checkin या नमस्ते कह सकते हैं।",
         "chat_cancel": "चैट रोक दी। जब चाहें वापस आइए।",
         "chat_keep_going": "मैं यहीं हूँ — आराम से लिखते रहिए।",
+        "chat_pre_mood_ask": "बात से पहले — अभी 1 (कम) से 10 (अच्छा) कैसा महसूस हो रहा है?",
+        "chat_post_mood_ask": "शेयर करने के लिए धन्यवाद। अब 1–10 कैसा महसूस हो रहा है?",
+        "chat_mood_skip_hint": "संख्या लिखें, या skip।",
+        "chat_mood_invalid": "1 से 10 संख्या या skip लिखें।",
+        "chat_pre_mood_ack": "ठीक — सुन रहा/रही हूँ। क्या मन में है?",
+        "chat_impact_up": "शुरुआत से +{delta} अंक ऊपर — अच्छा संकेत।",
+        "chat_impact_down": "शुरुआत से {delta} अंक कम — ईमानदारी ठीक है; धीरे रहें।",
+        "chat_impact_same": "शुरुआत जितना ही — आना भी काफ़ी है।",
         "breathe_choose": (
             "पैटर्न चुनें — समय नीचे बटन पर दिखेगा।\n\n"
             "/breathe calm | relaxation | energize भी भेज सकते हैं।"
@@ -338,6 +354,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_done": "शेअर केल्याबद्दल धन्यवाद. /checkin किंवा नमस्कार म्हणा.",
         "chat_cancel": "चॅट थांबवली. जेव्हा हवे तेव्हा परत या.",
         "chat_keep_going": "मी इथेच आहे — हळूहळू लिहित राहा.",
+        "chat_pre_mood_ask": "बोलण्याआधी — आता 1 (कमी) ते 10 (चांगले) कसे वाटते?",
+        "chat_post_mood_ask": "शेअर केल्याबद्दल धन्यवाद. आता 1–10 कसे वाटते?",
+        "chat_mood_skip_hint": "संख्या लिहा, किंवा skip.",
+        "chat_mood_invalid": "1 ते 10 संख्या किंवा skip.",
+        "chat_pre_mood_ack": "ठीक — ऐकत आहे. मनात काय?",
+        "chat_impact_up": "सुरुवातीपेक्षा +{delta} — चांगला संकेत.",
+        "chat_impact_down": "सुरुवातीपेक्षा {delta} कमी — ठीक आहे; स्वतःशी सौम्य रहा.",
+        "chat_impact_same": "सुरूवातीसारखेच — येणेही महत्त्वाचे.",
         "breathe_choose": (
             "पॅटर्न निवडा — वेळ खाली बटणांवर.\n\n"
             "/breathe calm | relaxation | energize पण पाठवू शकता."
@@ -454,6 +478,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_done": "શેર કરવા બદલ આભાર. /checkin અથવા નમસ્તે કહો.",
         "chat_cancel": "ચેટ રોકાઈ. જ્યારે જોઈએ પાછા આવો.",
         "chat_keep_going": "હું અહીં છું — આરામથી લખતા રહો.",
+        "chat_pre_mood_ask": "વાત પહેલાં — હમણાં 1 (ઓછું) થી 10 (સારું) કેવું લાગે છે?",
+        "chat_post_mood_ask": "શેર કરવા બદલ આભાર. હવે 1–10 કેવું લાગે છે?",
+        "chat_mood_skip_hint": "સંખ્યા લખો, અથવા skip.",
+        "chat_mood_invalid": "1 થી 10 સંખ્યા અથવા skip.",
+        "chat_pre_mood_ack": "ઠીક — સાંભળું છું. શું મનમાં?",
+        "chat_impact_up": "શરૂઆતથી +{delta} — સારું સંકેત.",
+        "chat_impact_down": "શરૂઆતથી {delta} ઓછું — ઠીક છે; નમ્ર રહો.",
+        "chat_impact_same": "શરૂઆત જેટલું જ — આવવું પણ મહત્વનું.",
         "breathe_choose": (
             "પેટર્ન પસંદ કરો — સમય નીચે બટનો પર.\n\n"
             "/breathe calm | relaxation | energize પણ મોકલી શકો."
@@ -570,6 +602,14 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_done": "শেয়ার করার জন্য ধন্যবাদ। /checkin বা নমস্কার বলুন।",
         "chat_cancel": "চ্যাট থামানো। যখন ইচ্ছা ফিরে আসুন।",
         "chat_keep_going": "আমি এখানেই — আস্তে আস্তে লিখতে থাকুন।",
+        "chat_pre_mood_ask": "কথা বলার আগে — এখন 1 (কম) থেকে 10 (ভালো) কেমন লাগছে?",
+        "chat_post_mood_ask": "শেয়ার করার জন্য ধন্যবাদ। এখন 1–10 কেমন লাগছে?",
+        "chat_mood_skip_hint": "সংখ্যা লিখুন, অথবা skip।",
+        "chat_mood_invalid": "1 থেকে 10 সংখ্যা অথবা skip।",
+        "chat_pre_mood_ack": "ঠিক আছে — শুনছি। মনে কী?",
+        "chat_impact_up": "শুরু থেকে +{delta} — ভালো ইঙ্গিত।",
+        "chat_impact_down": "শুরু থেকে {delta} কম — ঠিক আছে; নিজের প্রতি নম্র থাকুন।",
+        "chat_impact_same": "শুরুর মতোই — আসাটাও গুরুত্বপূর্ণ।",
         "breathe_choose": (
             "প্যাটার্ন বেছে নিন — সময় নিচের বোতামে।\n\n"
             "/breathe calm | relaxation | energize ও পাঠাতে পারেন।"

@@ -80,6 +80,18 @@ def _init_postgres() -> None:
                    message_id TEXT PRIMARY KEY,
                    created_at TEXT NOT NULL
                )""",
+            """CREATE TABLE IF NOT EXISTS chat_session_outcomes (
+                   id SERIAL PRIMARY KEY,
+                   user_phone TEXT NOT NULL,
+                   opened_at TIMESTAMP,
+                   closed_at TIMESTAMP,
+                   pre_intensity INTEGER,
+                   post_intensity INTEGER,
+                   mood_delta INTEGER,
+                   skipped_pre INTEGER DEFAULT 0,
+                   skipped_post INTEGER DEFAULT 0,
+                   source TEXT DEFAULT 'chat'
+               )""",
         ]
         for stmt in statements:
             c.execute(stmt)
@@ -177,6 +189,19 @@ def _init_sqlite(path: str) -> None:
     c.execute(
         """CREATE TABLE IF NOT EXISTS webhook_dedup
            (message_id TEXT PRIMARY KEY, created_at TEXT NOT NULL)"""
+    )
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS chat_session_outcomes
+           (id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_phone TEXT NOT NULL,
+            opened_at DATETIME,
+            closed_at DATETIME,
+            pre_intensity INTEGER,
+            post_intensity INTEGER,
+            mood_delta INTEGER,
+            skipped_pre INTEGER DEFAULT 0,
+            skipped_post INTEGER DEFAULT 0,
+            source TEXT DEFAULT 'chat')"""
     )
     conn.commit()
     conn.close()

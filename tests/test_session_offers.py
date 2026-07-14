@@ -20,10 +20,14 @@ def test_pause_chat_button_outside_chat(tmp_db, user_phone, monkeypatch):
 
 def test_pause_chat_button_inside_chat(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
+    monkeypatch.setattr("llm_wellness.chat_open_reply", lambda phone: None)
     start_chat(user_phone)
+    process_message(user_phone, "skip")  # pre mood
     reply = process_message(user_phone, "vent_done")
+    assert get_user_state(user_phone)["state"] == "chat_post_mood"
+    assert "1" in reply.text and "10" in reply.text
+    process_message(user_phone, "skip")
     assert get_user_state(user_phone)["state"] == "initial"
-    assert reply.text
 
 
 def test_sure_fulfills_pending_affirmation(tmp_db, user_phone, monkeypatch):

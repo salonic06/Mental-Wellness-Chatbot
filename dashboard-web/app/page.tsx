@@ -8,6 +8,7 @@ import {
   type Patterns,
   type MoodPoint,
   type ActivityTrends,
+  type ChatImpact,
 } from "@/lib/api";
 import { MoodChart } from "@/components/MoodChart";
 import { VentChart } from "@/components/VentChart";
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
   const [ventBuckets, setVentBuckets] = useState<{ sentiment_bucket: string; count: number }[]>([]);
   const [patterns, setPatterns] = useState<Patterns | null>(null);
+  const [impact, setImpact] = useState<ChatImpact | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -43,13 +45,14 @@ export default function DashboardPage() {
     if (!apiKey) return;
     setLoading(true);
     try {
-      const [s, mood, act, cats, vent, pat] = await Promise.all([
+      const [s, mood, act, cats, vent, pat, imp] = await Promise.all([
         api.summary(apiKey),
         api.moodTrends(apiKey, days),
         api.activityTrends(apiKey, days),
         api.categories(apiKey),
         api.ventSentiment(apiKey, days),
         api.patterns(apiKey, days),
+        api.chatImpact(apiKey, days),
       ]);
       setSummary(s);
       setMoodSeries(mood.series);
@@ -57,6 +60,7 @@ export default function DashboardPage() {
       setCategories(cats.items);
       setVentBuckets(vent.buckets);
       setPatterns(pat);
+      setImpact(imp);
       setError("");
       setLastRefresh(new Date());
     } catch (e) {
@@ -145,10 +149,26 @@ export default function DashboardPage() {
                 · avg mood <strong>{patterns.avg_mood}/10</strong>
               </>
             ) : null}
+            {impact && impact.sessions_with_both_scores > 0 ? (
+              <>
+                {" "}
+                · chat impact avg Δ{" "}
+                <strong>
+                  {impact.avg_mood_delta != null && impact.avg_mood_delta > 0 ? "+" : ""}
+                  {impact.avg_mood_delta}
+                </strong>
+                {impact.pct_improved != null ? (
+                  <>
+                    {" "}
+                    ({impact.pct_improved}% improved)
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </p>
           <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0.5rem 0 0" }}>
-            Good for interviews: real WhatsApp usage, privacy-safe aggregates, crisis flags only as
-            counts.
+            Real WhatsApp usage with privacy-safe aggregates. Chat impact uses optional
+            pre/post mood (1–10) — not clinical claims.
           </p>
         </div>
       )}
@@ -190,6 +210,46 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      <div className="card" style={{ marginBottom: "1rem" }}>
+        <h3 style={{ marginTop: 0 }}>Chat impact (pre → post mood)</h3>
+        <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginTop: 0 }}>
+          Optional 1–10 rating before and after Talk it out. Self-reported session shift —
+          not a clinical outcome.
+        </p>
+        {!impact || impact.sessions_opened === 0 ? (
+          <p style={{ color: "var(--muted)" }}>
+            No rated sessions yet — open Talk it out on WhatsApp and answer both mood prompts.
+          </p>
+        ) : (
+          <div className="grid grid-4">
+            <div>
+              <div className="metric-value">{impact.sessions_with_both_scores}</div>
+              <div className="metric-label">Sessions with both scores</div>
+            </div>
+            <div>
+              <div className="metric-value">
+                {impact.avg_mood_delta == null
+                  ? "—"
+                  : `${impact.avg_mood_delta > 0 ? "+" : ""}${impact.avg_mood_delta}`}
+              </div>
+              <div className="metric-label">Avg mood Δ</div>
+            </div>
+            <div>
+              <div className="metric-value">
+                {impact.pct_improved == null ? "—" : `${impact.pct_improved}%`}
+              </div>
+              <div className="metric-label">Improved</div>
+            </div>
+            <div>
+              <div className="metric-value">
+                {impact.avg_pre ?? "—"} → {impact.avg_post ?? "—"}
+              </div>
+              <div className="metric-label">Avg pre → post</div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="card" style={{ marginBottom: "1rem" }}>
         <h3 style={{ marginTop: 0 }}>Daily activity</h3>

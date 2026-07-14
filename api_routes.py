@@ -187,6 +187,54 @@ def patterns_insights(days: int = 14) -> Dict[str, Any]:
     return global_insights(days=days)
 
 
+@router.get("/metrics/chat-impact")
+def chat_impact(days: int = 30) -> Dict[str, Any]:
+    """
+    Aggregated Talk-it-out pre/post mood outcomes — no message text.
+    Impact requires both pre and post scores.
+    """
+    days = max(1, min(days, 365))
+    since = (datetime.now() - timedelta(days=days)).isoformat()
+    totals = _query(
+        """
+        SELECT COUNT(*) AS sessions,
+               SUM(CASE WHEN closed_at IS NOT NULL THEN 1 ELSE 0 END) AS closed,
+               SUM(CASE WHEN pre_intensity IS NOT NULL AND post_intensity IS NOT NULL
+                        THEN 1 ELSE 0 END) AS rated_both,
+               SUM(CASE WHEN mood_delta IS NOT NULL AND mood_delta > 0 THEN 1 ELSE 0 END)
+                   AS improved,
+               SUM(CASE WHEN mood_delta IS NOT NULL AND mood_delta < 0 THEN 1 ELSE 0 END)
+                   AS worsened,
+               SUM(CASE WHEN mood_delta = 0 THEN 1 ELSE 0 END) AS unchanged,
+               ROUND(AVG(CASE WHEN mood_delta IS NOT NULL THEN mood_delta END), 2)
+                   AS avg_delta,
+               ROUND(AVG(CASE WHEN pre_intensity IS NOT NULL THEN pre_intensity END), 2)
+                   AS avg_pre,
+               ROUND(AVG(CASE WHEN post_intensity IS NOT NULL THEN post_intensity END), 2)
+                   AS avg_post
+        FROM chat_session_outcomes
+        WHERE opened_at >= ?
+        """,
+        (since,),
+    )
+    row = totals[0] if totals else {}
+    rated = int(row.get("rated_both") or 0)
+    improved = int(row.get("improved") or 0)
+    return {
+        "days": days,
+        "sessions_opened": int(row.get("sessions") or 0),
+        "sessions_closed": int(row.get("closed") or 0),
+        "sessions_with_both_scores": rated,
+        "improved": improved,
+        "worsened": int(row.get("worsened") or 0),
+        "unchanged": int(row.get("unchanged") or 0),
+        "pct_improved": round(100.0 * improved / rated, 1) if rated else None,
+        "avg_mood_delta": row.get("avg_delta"),
+        "avg_pre": row.get("avg_pre"),
+        "avg_post": row.get("avg_post"),
+    }
+
+
 @router.get("/mood-logs")
 def mood_logs(limit: int = 50) -> Dict[str, Any]:
     limit = max(1, min(limit, 200))
