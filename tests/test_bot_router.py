@@ -66,17 +66,19 @@ def test_crisis_interrupts(tmp_db, user_phone, monkeypatch):
 def test_remind_on_off(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
     on = process_message(user_phone, "/remind on")
-    assert "ON" in on.text or "Reminder saved" in on.text or "Morning companion" in on.text
+    assert "morning" in on.text.lower() or "notes" in on.text.lower()
+    assert "UptimeRobot" not in on.text
     off = process_message(user_phone, "/remind off")
-    assert "OFF" in off.text
+    assert "morning" in off.text.lower() or "notes" in off.text.lower()
 
 
 def test_care_on_off(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
     on = process_message(user_phone, "/care on")
-    assert "ON" in on.text or "Care pings" in on.text
+    assert "care" in on.text.lower() or "holding" in on.text.lower()
+    assert "UptimeRobot" not in on.text
     off = process_message(user_phone, "/care off")
-    assert "OFF" in off.text
+    assert "won't" in off.text.lower() or "check-in" in off.text.lower()
 
 
 def test_admin_stats(tmp_db, user_phone, monkeypatch):

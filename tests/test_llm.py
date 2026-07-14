@@ -58,7 +58,9 @@ def test_affirmation_uses_llm_when_available(bot, user_phone, monkeypatch):
         llm_client, "generate", lambda *a, **k: "You are steadier than you feel."
     )
     msg = bot.daily_affirmation("", user_phone)
-    assert msg == "You are steadier than you feel."
+    assert msg.startswith("You are steadier than you feel.")
+    # May append a one-time morning-notes opt-in hint when reminders are off.
+    assert "You are steadier than you feel." in msg
 
 
 def _seed_moods(user_phone, values):

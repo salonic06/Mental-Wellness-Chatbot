@@ -89,7 +89,15 @@ def _dispatch_command(
     elif command == "/mood" and not args.strip():
         pass
     else:
-        set_user_state(sender, "initial", session.get("data", {}))
+        # Handlers (affirmation, mood, summary, …) may set pending_offer —
+        # preserve soft opt-in yes/sure while resetting FSM to initial.
+        live = get_user_state(sender).get("data") or {}
+        keep = {
+            k: live[k]
+            for k in ("pending_offer", "companion_optin_suggest_date")
+            if k in live
+        }
+        set_user_state(sender, "initial", keep)
 
     if command == "/start":
         return BotReply(

@@ -113,6 +113,16 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
             intensity, category, hour_of_day=datetime.now().hour
         )
 
+        from companion_optin import soft_opt_in_suggestion
+        from session_offers import get_pending_offer
+
+        # Prefer care opt-in on heavy check-ins; otherwise morning notes if off.
+        prefer = "care" if intensity <= 4 else "morning"
+        hint = soft_opt_in_suggestion(
+            user_phone, prefer=prefer, intensity=intensity
+        )
+        tip_offer = get_pending_offer(user_phone) if hint else cmd
+
         try:
             from llm_wellness import checkin_closing_reply
 
@@ -122,8 +132,11 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
             if closing:
                 from chat_flow import enter_chat_with_context
 
-                enter_chat_with_context(user_phone, closing, pending_offer=cmd)
-                return closing
+                text = closing + hint
+                enter_chat_with_context(
+                    user_phone, text, pending_offer=tip_offer
+                )
+                return text
         except Exception:
             pass
 
@@ -132,11 +145,14 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
             f"Check-in saved — {intensity}/10, mostly about {category}.\n\n"
             f"{label}: {tip}\n\n"
             f"When you're ready: {cmd}"
+            + hint
         )
         try:
             from chat_flow import enter_chat_with_context
 
-            enter_chat_with_context(user_phone, plain, pending_offer=cmd)
+            enter_chat_with_context(
+                user_phone, plain, pending_offer=tip_offer
+            )
         except Exception:
             pass
         return plain

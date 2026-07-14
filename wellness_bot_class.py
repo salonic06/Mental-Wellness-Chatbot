@@ -110,23 +110,36 @@ class WellnessBot:
 
                 personalized = mood_log_reply(sender, intensity, notes)
                 if personalized:
-                    return personalized
+                    from companion_optin import soft_opt_in_suggestion
+
+                    prefer = "care" if intensity <= 4 else "auto"
+                    return personalized + soft_opt_in_suggestion(
+                        sender, prefer=prefer, intensity=intensity
+                    )
             except Exception as e:
                 logger.error("Mood log LLM reply failed: %s", e)
+
+            from companion_optin import soft_opt_in_suggestion
+
+            prefer = "care" if intensity <= 4 else "morning"
+            hint = soft_opt_in_suggestion(sender, prefer=prefer, intensity=intensity)
 
             if intensity <= 4:
                 return (
                     f"Logged {intensity}/10 — that's a heavy place to be. "
                     "Want to talk it through? /vent is a good space for that."
+                    + hint
                 )
             if intensity <= 6:
                 return (
                     f"Logged {intensity}/10. Be gentle with yourself today. "
                     "/breathe or /vent might help if you want."
+                    + hint
                 )
             return (
                 f"Logged {intensity}/10 — good to name that. "
                 "Hope the rest of your day has room for more of this."
+                + hint
             )
 
         except ValueError:
@@ -426,26 +439,41 @@ class WellnessBot:
             conn.close()
 
     def daily_affirmation(self, args, sender):
+        from companion_optin import soft_opt_in_suggestion
+
         try:
             from llm_wellness import personalized_affirmation
 
             personalized = personalized_affirmation(sender)
             if personalized:
-                return personalized
+                return personalized + soft_opt_in_suggestion(sender, prefer="morning")
         except Exception as e:
             logger.error("Personalized affirmation failed: %s", e)
 
         if self.affirmations:
-            return random.choice(self.affirmations)
+            return random.choice(self.affirmations) + soft_opt_in_suggestion(
+                sender, prefer="morning"
+            )
         from languages import t
 
         return t(sender, "affirmation_empty")
 
     def weekly_summary_command(self, args, sender):
+        from companion_optin import soft_opt_in_suggestion
+
         try:
             from llm_wellness import weekly_summary_text
 
-            return weekly_summary_text(sender)
+            body = weekly_summary_text(sender)
+            prefer = "auto"
+            try:
+                from patterns import care_ping_reason
+
+                if care_ping_reason(sender):
+                    prefer = "care"
+            except Exception:
+                pass
+            return body + soft_opt_in_suggestion(sender, prefer=prefer)
         except Exception as e:
             logger.error("Weekly summary failed: %s", e)
             from languages import t
@@ -520,8 +548,6 @@ class WellnessBot:
     def remind_command(self, args, sender):
         from checkin_nudge_scheduler import (
             VALID_MODES,
-            _nudge_hour,
-            _nudge_window_minutes,
             get_reminder_status,
             nudges_enabled,
             set_daily_reminder,
@@ -531,98 +557,102 @@ class WellnessBot:
         parts = (args or "").strip().split(None, 1)
         sub = (parts[0] if parts else "").lower()
         rest = (parts[1] if len(parts) > 1 else "").strip().lower()
-        tz_name = os.environ.get("TIMEZONE", "UTC")
-        hour = _nudge_hour()
-        window = _nudge_window_minutes()
-        end_h = hour + (window - 1) // 60
-        end_m = (window - 1) % 60
 
         if sub in ("on", "enable", "yes"):
             mode = rest if rest in VALID_MODES else "both"
             set_daily_reminder(sender, True, mode=mode)
             if not nudges_enabled():
                 return (
-                    "Reminder saved. Note: server has ENABLE_DAILY_CHECKIN_NUDGES=false, "
-                    "so pushes will not run until your host enables it."
+                    "I've noted that you'd like morning notes. "
+                    "They're not sending from the server yet — once that's on, "
+                    "I'll start checking in with you in the mornings."
                 )
             return (
-                f"Morning companion is **ON** (mode: **{mode}**).\n"
-                f"You'll get one message in roughly **{hour}:00–{end_h}:{end_m:02d} {tz_name}** "
-                f"until **/remind off**.\n"
-                "Modes: `/remind mode affirmation` · `checkin` · `both`\n"
-                "Also try **/care on** for extra check-ins when things look rough.\n\n"
-                "_Needs the bot host awake (e.g. UptimeRobot pinging /health) and "
-                "that you've messaged within ~24h (WhatsApp rule)._"
+                "I'll send you a short morning note when the day begins — "
+                "a little something to start with, and space to share how you feel.\n\n"
+                "Want quieter mornings later? Just say **/remind off**.\n"
+                "Prefer only an affirmation, or only a check-in invite? "
+                "Tell me **/remind mode affirmation** or **/remind mode checkin**."
             )
         if sub in ("off", "disable", "no"):
             set_daily_reminder(sender, False)
-            return "Morning companion is **OFF**. Evening care pings are unchanged — use **/care off** for those."
+            return (
+                "Okay — no more morning notes from me. "
+                "If you still want me to check in when things look rough, "
+                "that's separate under care pings (menu → Care pings)."
+            )
         if sub == "mode" and rest in VALID_MODES:
             set_reminder_mode(sender, rest)
             status = get_reminder_status(sender)
-            on = "ON" if status["enabled"] else "OFF"
+            labels = {
+                "affirmation": "just a morning affirmation",
+                "checkin": "a soft morning check-in invite",
+                "both": "an affirmation plus a soft check-in invite",
+            }
+            line = labels.get(rest, rest)
+            if status["enabled"]:
+                return (
+                    f"Got it — mornings will be {line}. "
+                    "Say **/remind off** anytime to pause."
+                )
             return (
-                f"Morning mode set to **{rest}**. Reminder is currently **{on}**.\n"
-                "Send **/remind on** if it is off."
+                f"Got it — I'll use {line} when mornings are on. "
+                "Say **/remind on** (or tap Morning notes) when you're ready."
             )
         if sub == "mode":
-            return "Usage: `/remind mode affirmation` · `checkin` · `both`"
+            return (
+                "You can pick what mornings feel like:\n"
+                "• **/remind mode affirmation** — just a note\n"
+                "• **/remind mode checkin** — soft how are you\n"
+                "• **/remind mode both** — a bit of each"
+            )
 
         status = get_reminder_status(sender)
-        state = "ON" if status["enabled"] else "OFF"
-        last = status["last_sent_date"] or "never"
+        morning = "on" if status["enabled"] else "off"
+        care = "on" if status.get("care_enabled") else "off"
         mode = status.get("mode") or "both"
-        care = "ON" if status.get("care_enabled") else "OFF"
-        if status["enabled"]:
-            return (
-                f"Morning companion: **{state}** · mode **{mode}** "
-                f"(~{hour}:00–{end_h}:{end_m:02d} {tz_name}).\n"
-                f"Care pings: **{care}**. Last morning send: {last}.\n"
-                "`/remind off` · `/remind mode …` · `/care on|off`"
-            )
         return (
-            f"Morning companion: **{state}** (mode {mode}). Care pings: **{care}**. "
-            f"Last morning send: {last}.\n"
-            "Send **/remind on** to start · **/care on** for gentle low-mood check-ins."
+            f"Morning notes are **{morning}** (style: {mode}). "
+            f"Care check-ins are **{care}**.\n\n"
+            "Tap *Morning notes* or *Care pings* in the menu to turn them on, "
+            "or send **/remind on** / **/care on**."
         )
 
     def care_command(self, args, sender):
         from checkin_nudge_scheduler import (
-            _care_hour,
-            _care_min_days_between,
             care_pings_enabled,
             get_reminder_status,
             set_care_enabled,
         )
 
         sub = (args or "").strip().lower()
-        tz_name = os.environ.get("TIMEZONE", "UTC")
-        hour = _care_hour()
 
         if sub in ("on", "enable", "yes"):
             set_care_enabled(sender, True)
             if not care_pings_enabled():
                 return (
-                    "Care pings saved. Note: server has care pings disabled "
-                    "(ENABLE_CARE_PINGS / ENABLE_DAILY_CHECKIN_NUDGES)."
+                    "I've noted that you'd like occasional care check-ins. "
+                    "They're not sending from the server yet — once that's on, "
+                    "I'll look out for you when things feel heavier."
                 )
             return (
-                f"Care pings are **ON**.\n"
-                f"If mood trends look rough, I may gently check in around **{hour}:00 {tz_name}** "
-                f"(at most about every {_care_min_days_between()} day(s)).\n"
-                "Never a flood — and only while WhatsApp still allows free messages "
-                "(you've messaged within ~24h). **/care off** anytime."
+                "Okay — if your mood looks like it's been rough for a bit, "
+                "I may gently ask how you're holding up. Not often, never pushy.\n\n"
+                "You can turn that off anytime with **/care off**."
             )
         if sub in ("off", "disable", "no"):
             set_care_enabled(sender, False)
-            return "Care pings are **OFF**."
+            return (
+                "Understood — I won't send those extra check-ins. "
+                "Morning notes are unchanged."
+            )
 
         status = get_reminder_status(sender)
-        state = "ON" if status.get("care_enabled") else "OFF"
-        last = status.get("last_care_sent_date") or "never"
+        state = "on" if status.get("care_enabled") else "off"
         return (
-            f"Care pings: **{state}**. Last care send: {last}.\n"
-            "Send **/care on** for gentle check-ins when things look rough · **/care off** to stop."
+            f"Care check-ins are **{state}**.\n"
+            "Tap *Care pings* in the menu or send **/care on** if you'd like me "
+            "to look out for you when things feel heavier."
         )
 
     def get_command_and_args(self, message):
