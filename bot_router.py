@@ -159,7 +159,7 @@ def _handle_offer_dispatch(sender: str, offer_msg: str, session: dict, bot: Well
     command = parts[0].lower()
     args = parts[1] if len(parts) > 1 else ""
     if command not in cmd_map:
-        return BotReply("Let's try that again — open the menu or type /help.")
+        return BotReply(t(sender, "router_try_again"))
     clear_user_state(sender)
     return _dispatch_command(sender, command, args, session, bot, cmd_map)
 
@@ -195,12 +195,16 @@ def process_message(sender: str, raw_text: str) -> BotReply:
             cmd = "/summary"
         return _dispatch_command(sender, cmd, args, session, bot, cmd_map)
 
-    # Pause chat button /done — works in or out of chat mode
+    # Pause chat button /done — works in chat mode; during meditation ends session
     if is_done_signal(raw_text, stripped):
-        if is_chatting(sender) or current_state in CHAT_STATES:
-            msg = handle_chat_message(sender, "/done") or "Chat paused."
+        if current_state == "meditating":
+            msg = bot.handle_meditation_progress("end", sender)
+            set_user_state(sender, "initial", session.get("data", {}))
             return BotReply(msg)
-        return BotReply("No open chat to pause — just tell me how you're doing.")
+        if is_chatting(sender) or current_state in CHAT_STATES:
+            msg = handle_chat_message(sender, "/done") or t(sender, "router_chat_paused")
+            return BotReply(msg)
+        return BotReply(t(sender, "router_no_chat_pause"))
 
     # Accept pending offers ("sure", "yes", …) before anything else
     offer_reply = try_fulfill_offer(sender, stripped, _dispatch)
@@ -211,6 +215,12 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         command, args = bot.get_command_and_args(text_lower)
         if command in ("/done", "/cancel"):
             return BotReply(handle_chat_message(sender, stripped) or "")
+        if command == "/vent":
+            # Already in chat — never dump the robotic "Keep sharing" shell.
+            from llm_wellness import chat_already_open_reply
+
+            ack = chat_already_open_reply(sender) or t(sender, "chat_keep_going")
+            return BotReply(ack, buttons=chat_followup_buttons(sender))
         if command in ("/start", "/help", "/checkin", "/summary", "/analyze", "/mood", "/language"):
             clear_user_state(sender)
             return _dispatch(command, args)
@@ -218,9 +228,9 @@ def process_message(sender: str, raw_text: str) -> BotReply:
             clear_user_state(sender)
             return _dispatch(command, args)
         if command and command in cmd_map:
-            return BotReply("Keep sharing, or /done to pause this chat.")
+            return BotReply(t(sender, "router_keep_sharing"))
         if command:
-            return BotReply("Keep sharing, or /done to pause this chat.")
+            return BotReply(t(sender, "router_keep_sharing"))
 
         msg = handle_chat_message(sender, stripped) or t(sender, "chat_keep_going")
         if msg.startswith("__OFFER__:"):
@@ -241,7 +251,7 @@ def process_message(sender: str, raw_text: str) -> BotReply:
             return _dispatch(command, args)
         if command in ("/cancel", "/done") or stripped == "cmd_cancel":
             _exit_meditation(bot, sender)
-            return BotReply("Cancelled. Type /help for commands.")
+            return BotReply(t(sender, "router_cancelled"))
         if command and command in cmd_map:
             bot.clear_active_meditation(sender)
             return _dispatch(command, args)
@@ -254,17 +264,14 @@ def process_message(sender: str, raw_text: str) -> BotReply:
                 return _dispatch(command, args)
             if command in ("/cancel", "/done") or stripped == "cmd_cancel":
                 _exit_meditation(bot, sender)
-                return BotReply("Meditation ended. Type /help for commands.")
+                return BotReply(t(sender, "router_meditation_ended"))
             if command in cmd_map:
                 bot.clear_active_meditation(sender)
                 return _dispatch(command, args)
-            return BotReply(
-                "During meditation: ready, next, pause, resume, status, or end.\n"
-                "Or /cancel to exit."
-            )
+            return BotReply(t(sender, "router_meditation_during_help"))
 
         msg = bot.handle_meditation_progress(text_lower, sender)
-        if msg.startswith("You haven't started"):
+        if msg == t(sender, "med_not_started"):
             set_user_state(sender, "meditation_choose", session.get("data", {}))
             return BotReply(
                 f"{msg}\n\n{t(sender, 'meditation_choose')}",
@@ -285,16 +292,16 @@ def process_message(sender: str, raw_text: str) -> BotReply:
     if command in ("/cancel", "cancel") or stripped == "cmd_cancel":
         bot.clear_active_meditation(sender)
         clear_user_state(sender)
-        return BotReply("Cancelled. Type /help for commands.")
+        return BotReply(t(sender, "router_cancelled"))
 
     if command in cmd_map:
         reply = _dispatch(command, args)
     elif command:
-        reply = BotReply("I didn't catch that — try /help or open the menu.")
+        reply = BotReply(t(sender, "router_didnt_catch"))
         set_user_state(sender, "initial", session.get("data", {}))
     else:
         reply = handle_free_text(sender, stripped)
         if not is_chatting(sender):
             set_user_state(sender, "initial", session.get("data", {}))
 
-    return reply if reply.text else BotReply("Type /help for commands.")
+    return reply if reply.text else BotReply(t(sender, "router_help_fallback"))

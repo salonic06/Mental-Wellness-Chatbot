@@ -131,10 +131,14 @@ async def cancel_meditation_nudges(user_phone: str) -> None:
 
 
 async def _send_part(user_phone: str, *, part_num: int, total: int, body: str) -> None:
+    from languages import t
+    from llm_wellness import localize_wellness_content
+
+    localized_body = localize_wellness_content(user_phone, body, kind="meditation")
     text = (
-        f"Meditation — part {part_num}/{total}\n\n"
-        f"{body}\n\n"
-        "Type **next** or **end** anytime."
+        f"{t(user_phone, 'med_nudge_header', part=str(part_num), total=str(total))}\n\n"
+        f"{localized_body}\n\n"
+        f"{t(user_phone, 'med_nudge_footer')}"
     )
     await _make_api().send_text(to=user_phone, text=text)
 

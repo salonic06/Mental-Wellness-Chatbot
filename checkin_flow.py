@@ -142,4 +142,4 @@ def handle_checkin_message(user_phone: str, text: str) -> Optional[str]:
         return plain
 
     clear_user_state(user_phone)
-    return "Something went wrong during check-in. Type /checkin to start again."
+    return t(user_phone, "checkin_error")

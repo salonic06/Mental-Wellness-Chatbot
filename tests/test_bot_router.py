@@ -93,6 +93,61 @@ def test_mood_without_args_starts_checkin(tmp_db, user_phone, monkeypatch):
     assert get_user_state(user_phone)["state"] == "checkin_mood"
 
 
+def test_meditate_marathi_shell_localized(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    monkeypatch.setattr(
+        "llm_wellness.localize_wellness_content",
+        lambda phone, text, kind="meditation": "तुमच्या दहा मिनिटांच्या ध्यान सत्रात स्वागत आहे.",
+    )
+    set_user_language(user_phone, "mr")
+    choose = process_message(user_phone, "/meditate")
+    assert "Choose your meditation" not in choose.text
+    assert "ध्यान" in choose.text
+    assert get_user_state(user_phone)["state"] == "meditation_choose"
+    intro = process_message(user_phone, "med_medium")
+    assert "Welcome to your" not in intro.text
+    assert "ready" in intro.text.lower()
+    assert get_user_state(user_phone)["state"] == "meditating"
+    help_msg = process_message(user_phone, "great")
+    assert "During meditation" not in help_msg.text
+    assert "ready" in help_msg.text.lower() or "ध्यान" in help_msg.text
+
+
+def test_done_during_meditation_ends_session(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    set_user_language(user_phone, "mr")
+    process_message(user_phone, "/meditate medium")
+    reply = process_message(user_phone, "/done")
+    assert "No open chat" not in reply.text
+    assert get_user_state(user_phone)["state"] == "initial"
+
+
+def test_vent_while_already_chatting_is_warm(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    monkeypatch.setattr(
+        "llm_wellness.chat_already_open_reply",
+        lambda phone: "I'm still right here with you — go ahead.",
+    )
+    process_message(user_phone, "/vent")
+    assert get_user_state(user_phone)["state"] == "chatting"
+    reply = process_message(user_phone, "cmd_vent")
+    assert "Keep sharing" not in reply.text
+    assert "/done" not in reply.text
+    assert "still right here" in reply.text.lower()
+
+
+def test_start_chat_open_avoids_command_footer(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    monkeypatch.setattr(
+        "llm_wellness.chat_open_reply",
+        lambda phone: "I'm here with you — what's been sitting with you today?",
+    )
+    reply = process_message(user_phone, "cmd_vent")
+    assert "This is your space" not in reply.text
+    assert "/done" not in reply.text
+    assert "I'm here with you" in reply.text
+
+
 def test_analyze_routes_to_summary(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
     reply = process_message(user_phone, "/analyze")

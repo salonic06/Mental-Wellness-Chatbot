@@ -6,6 +6,7 @@ import re
 from typing import Optional
 
 from bot_reply import BotReply
+from languages import t
 from state_store import clear_user_state, get_user_state, set_user_state
 
 AFFIRMATIVE_RE = re.compile(
@@ -59,7 +60,7 @@ def try_fulfill_offer(
 
     if is_negative(text):
         clear_pending_offer(user_phone)
-        return BotReply("No problem — we can skip that. What's on your mind?")
+        return BotReply(t(user_phone, "offer_skip"))
 
     if not is_affirmative(text):
         return None

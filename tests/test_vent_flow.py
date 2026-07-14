@@ -35,10 +35,15 @@ def test_vent_session_history_accumulates(tmp_db, user_phone, monkeypatch):
     assert "Work was awful" in prior[0]["content"]
 
 
-def test_vent_flow(tmp_db, user_phone):
+def test_vent_flow(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setattr(
+        "llm_wellness.chat_open_reply",
+        lambda phone: None,  # use static warm fallback; no command footer
+    )
     intro = start_vent(user_phone)
     assert get_user_state(user_phone)["state"] == "chatting"
-    assert "/done" in intro.lower()
+    assert "right here with you" in intro.lower() or "space" in intro.lower()
+    assert "/done" not in intro.lower()
 
     reply = handle_vent_message(user_phone, "Today was stressful but I managed")
     assert reply and ("Detected tone" in reply or "Tone:" in reply)

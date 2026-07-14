@@ -1,5 +1,6 @@
 from languages import (
     LANGUAGES,
+    STRINGS,
     effective_language,
     get_user_language,
     language_list_sections,
@@ -75,3 +76,9 @@ def test_marathi_menu_fully_localized(tmp_db):
     assert "Meditate" not in titles
     assert "चेक-इन" in titles
     assert t("919900000010", "menu_label") == "आरोग्य मेनू"
+
+
+def test_all_locales_have_same_string_keys():
+    en_keys = set(STRINGS["en"].keys())
+    for code in ("hi", "mr", "gu", "bn"):
+        assert set(STRINGS[code].keys()) == en_keys, f"missing keys in {code}"

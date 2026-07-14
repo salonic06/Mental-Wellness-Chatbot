@@ -90,16 +90,15 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "checkin_out_of_range": "Please use a number between 1 and 10.",
         "checkin_invalid_category": "Please choose a topic from the list.",
         "chat_intro": (
-            "This is your space — say whatever's on your mind, no filter needed.\n"
-            "I'll listen and respond thoughtfully."
+            "I'm right here with you — say whatever is on your mind, no filter needed."
         ),
-        "chat_footer": "No commands needed — just talk. /done when you're ready to pause, /cancel to stop.",
+        "chat_footer": "Just talk. Pause anytime when you're ready.",
         "chat_done": (
             "I'm glad you shared that. I'll remember the mood trends — "
-            "come back anytime. /checkin or just say hi."
+            "come back anytime."
         ),
-        "chat_cancel": "Chat paused. I'm here when you need me.",
-        "chat_keep_going": "Keep going — or /done when you're ready.",
+        "chat_cancel": "Okay — I'm here whenever you want to pick this back up.",
+        "chat_keep_going": "I'm still here — take your time.",
         "breathe_choose": (
             "Pick a pattern — each shows timing and about how long it takes.\n\n"
             "Tap a button below, or send /breathe calm | relaxation | energize"
@@ -113,6 +112,63 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "breathe_name_calm": "Calm",
         "breathe_name_relaxation": "Relaxation",
         "breathe_name_energize": "Energize",
+        "med_option_line": "/meditate {med_key} — {duration} min ({parts} parts)",
+        "med_invalid_type": "Invalid type. Use: /meditate quick | medium | long",
+        "med_returning_intro": (
+            "*{duration}-min {type} meditation* — {parts} parts.\n\n"
+            "Type **ready** to begin. **next** skips ahead · **pause** / **resume** · **end**"
+        ),
+        "med_session_footer": (
+            "*{duration}-minute session · {parts} parts*\n"
+            "Type **ready** when you're settled — parts arrive automatically.\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_pacing_end": "\n\nType **end** when you are finished.",
+        "med_pacing_auto": "\n\nNext part arrives automatically in ~{gap} minute(s) (or type **next** to skip ahead).",
+        "med_pacing_pause": "\n\nPause ~{gap} minute(s), then type **next** for the following part.",
+        "med_pacing_next": "\n\nType **next** when you are ready for the following part.",
+        "med_not_started": "You haven't started a meditation session yet. Use /meditate to begin.",
+        "med_type_error": "Error: Meditation type '{type}' not found.",
+        "med_status": "Session: {type} ({duration} min)\nPart {part} of {total}{paused_suffix}",
+        "med_status_paused_suffix": " · paused",
+        "med_paused": "Paused. Type **resume** or **end**.",
+        "med_resumed": "Resumed. The next part arrives in ~1 minute per step (or type **next** / **end**).",
+        "med_pause_blocked": "Session is paused. Type **resume** or **end**.",
+        "med_already_started": "Session already started. Type **next** for the next part.",
+        "med_help_during": (
+            "During meditation: **ready** (start) · **next** (next part) · "
+            "**pause** · **resume** · **end** · **status**"
+        ),
+        "med_end_followup": "/mood or /checkin if you want to log how you feel.",
+        "med_end_followup_alt": "/checkin or /mood if you want to capture how you feel.",
+        "med_end_fallback": "Nice work showing up for yourself.",
+        "med_error": "An error occurred. Please try again later.",
+        "med_default_intro": "Find a comfortable position.",
+        "med_default_continue": "Continue at your own pace.",
+        "med_nudge_header": "Meditation — part {part}/{total}",
+        "med_nudge_footer": "Type **next** or **end** anytime.",
+        "router_no_chat_pause": "No open chat to pause — just tell me how you're doing.",
+        "router_cancelled": "Cancelled. Type /help for commands.",
+        "router_meditation_ended": "Meditation ended. Type /help for commands.",
+        "router_meditation_during_help": (
+            "During meditation: ready, next, pause, resume, status, or end.\nOr /cancel to exit."
+        ),
+        "router_keep_sharing": "I'm still listening — tell me more whenever you're ready.",
+        "router_try_again": "Let's try that again — open the menu or type /help.",
+        "router_didnt_catch": "I didn't catch that — try /help or open the menu.",
+        "router_help_fallback": "Type /help for commands.",
+        "router_chat_paused": "Chat paused.",
+        "checkin_error": "Something went wrong during check-in. Type /checkin to start again.",
+        "mood_invalid_rating": "Please rate your mood between 1 and 10.",
+        "mood_usage": "Use a number 1–10, then an optional note. Example: /mood 7 feeling okay",
+        "mood_log_error": "Sorry, there was an error logging your mood. Please try again later.",
+        "affirmation_empty": "Sorry, no affirmations available right now.",
+        "summary_error": "Couldn't build your weekly summary right now. Try /analyze for a quick 7-day average.",
+        "companion_welcome": "You're welcome. I'm here whenever you need me.",
+        "companion_goodbye": "Take care of yourself. I'll be here when you want to check back in.",
+        "companion_listen": "I'm listening — tell me more.",
+        "companion_here": "I'm here with you. What's on your mind?",
+        "offer_skip": "No problem — we can skip that. What's on your mind?",
     },
     "hi": {
         "welcome": (
@@ -157,7 +213,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_footer": "सीधे लिखिए — रोकने के लिए /done, बंद के लिए /cancel।",
         "chat_done": "शेयर करने के लिए धन्यवाद। /checkin या नमस्ते कह सकते हैं।",
         "chat_cancel": "चैट रोक दी। जब चाहें वापस आइए।",
-        "chat_keep_going": "लिखते रहिए — या /done से रोकें।",
+        "chat_keep_going": "मैं यहीं हूँ — आराम से लिखते रहिए।",
         "breathe_choose": (
             "पैटर्न चुनें — समय नीचे बटन पर दिखेगा।\n\n"
             "/breathe calm | relaxation | energize भी भेज सकते हैं।"
@@ -171,6 +227,60 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "breathe_name_calm": "शांत",
         "breathe_name_relaxation": "आराम",
         "breathe_name_energize": "ऊर्जा",
+        "med_option_line": "/meditate {med_key} — {duration} मि. ({parts} भाग)",
+        "med_invalid_type": "गलत प्रकार। /meditate quick | medium | long",
+        "med_returning_intro": (
+            "*{duration} मि. {type} ध्यान* — {parts} भाग।\n\n"
+            "शुरू करने के लिए **ready** · **next** · **pause** / **resume** · **end**"
+        ),
+        "med_session_footer": (
+            "*{duration} मिनट · {parts} भाग*\n"
+            "तैयार होने पर **ready** — भाग अपने आप आएंगे।\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_pacing_end": "\n\nखत्म होने पर **end** लिखें।",
+        "med_pacing_auto": "\n\nअगला भाग ~{gap} मिनट में (या **next** से आगे बढ़ें)।",
+        "med_pacing_pause": "\n\n~{gap} मिनट रुकें, फिर **next**।",
+        "med_pacing_next": "\n\nतैयार हों तो **next** लिखें।",
+        "med_not_started": "अभी ध्यान शुरू नहीं हुआ। /meditate से शुरू करें।",
+        "med_type_error": "त्रुटि: ध्यान प्रकार '{type}' नहीं मिला।",
+        "med_status": "सत्र: {type} ({duration} मि.)\nभाग {part}/{total}{paused_suffix}",
+        "med_status_paused_suffix": " · रुका",
+        "med_paused": "रुका। **resume** या **end**।",
+        "med_resumed": "फिर शुरू। अगला भाग ~1 मिनट में (**next** / **end**)।",
+        "med_pause_blocked": "सत्र रुका है। **resume** या **end**।",
+        "med_already_started": "पहले से चल रहा है। अगला भाग: **next**।",
+        "med_help_during": (
+            "ध्यान में: **ready** · **next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_end_followup": "मूड लॉग: /mood या /checkin।",
+        "med_end_followup_alt": "मूड लॉग: /checkin या /mood।",
+        "med_end_fallback": "खुद के लिए समय निकाला — अच्छा किया।",
+        "med_error": "त्रुटि। कृपया फिर कोशिश करें।",
+        "med_default_intro": "आराम से बैठें।",
+        "med_default_continue": "अपनी गति से जारी रखें।",
+        "med_nudge_header": "ध्यान — भाग {part}/{total}",
+        "med_nudge_footer": "कभी भी **next** या **end**।",
+        "router_no_chat_pause": "रोकने के लिए कोई खुली चैट नहीं — बताइए कैसे हैं।",
+        "router_cancelled": "रद्द। /help कभी भी।",
+        "router_meditation_ended": "ध्यान समाप्त। /help देखें।",
+        "router_meditation_during_help": "ध्यान में: ready, next, pause, resume, status, end। या /cancel।",
+        "router_keep_sharing": "मैं सुन रहा/रही हूँ — जब चाहें और बताइए।",
+        "router_try_again": "फिर कोशिश करें — मेनू या /help।",
+        "router_didnt_catch": "समझ नहीं आया — /help या मेनू।",
+        "router_help_fallback": "/help देखें।",
+        "router_chat_paused": "चैट रोक दी।",
+        "checkin_error": "चेक-इन में समस्या। /checkin से फिर शुरू करें।",
+        "mood_invalid_rating": "1 से 10 के बीच मूड rating दें।",
+        "mood_usage": "1–10 संख्या, फिर नोट। उदा.: /mood 7 ठीक लग रहा",
+        "mood_log_error": "मूड लॉग नहीं हो सका। बाद में कोशिश करें।",
+        "affirmation_empty": "अभी कोई प्रेरणा उपलब्ध नहीं।",
+        "summary_error": "सारांश नहीं बना। /analyze आज़माएँ।",
+        "companion_welcome": "स्वागत है। जब चाहें यहाँ हूँ।",
+        "companion_goodbye": "ख्याल रखें। वापस आना।",
+        "companion_listen": "सुन रहा/रही हूँ — और बताइए।",
+        "companion_here": "मैं यहाँ हूँ। क्या मन में है?",
+        "offer_skip": "ठीक है — छोड़ सकते हैं। क्या मन में है?",
     },
     "mr": {
         "welcome": (
@@ -215,7 +325,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_footer": "थेट लिहा — थांबवण्यासाठी /done, बंद /cancel.",
         "chat_done": "शेअर केल्याबद्दल धन्यवाद. /checkin किंवा नमस्कार म्हणा.",
         "chat_cancel": "चॅट थांबवली. जेव्हा हवे तेव्हा परत या.",
-        "chat_keep_going": "लिहित रaha — किंवा /done.",
+        "chat_keep_going": "मी इथेच आहे — हळूहळू लिहित राहा.",
         "breathe_choose": (
             "पॅटर्न निवडा — वेळ खाली बटणांवर.\n\n"
             "/breathe calm | relaxation | energize पण पाठवू शकता."
@@ -229,6 +339,60 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "breathe_name_calm": "शांत",
         "breathe_name_relaxation": "आराम",
         "breathe_name_energize": "ऊर्जा",
+        "med_option_line": "/meditate {med_key} — {duration} मि. ({parts} भाग)",
+        "med_invalid_type": "चुकीचा प्रकार। /meditate quick | medium | long",
+        "med_returning_intro": (
+            "*{duration} मि. {type} ध्यान* — {parts} भाग.\n\n"
+            "सुरू: **ready** · **next** · **pause** / **resume** · **end**"
+        ),
+        "med_session_footer": (
+            "*{duration} मिनिट · {parts} भाग*\n"
+            "तयार झाल्यावर **ready** — भाग आपोआप येतील.\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_pacing_end": "\n\nसंपल्यावर **end** लिहा.",
+        "med_pacing_auto": "\n\nपुढचा भाग ~{gap} मिनिटात (किंवा **next**).",
+        "med_pacing_pause": "\n\n~{gap} मिनिट थांबा, मग **next**.",
+        "med_pacing_next": "\n\nतयार असाल तर **next** लिहा.",
+        "med_not_started": "अजून ध्यान सुरू नाही. /meditate ने सुरू करा.",
+        "med_type_error": "त्रुटी: ध्यान प्रकार '{type}' सापडला नाही.",
+        "med_status": "सत्र: {type} ({duration} मि.)\nभाग {part}/{total}{paused_suffix}",
+        "med_status_paused_suffix": " · थांबले",
+        "med_paused": "थांबले. **resume** किंवा **end**.",
+        "med_resumed": "पुन्हा सुरू. पुढचा भाग ~1 मिनिटात (**next** / **end**).",
+        "med_pause_blocked": "सत्र थांबले. **resume** किंवा **end**.",
+        "med_already_started": "आधीच सुरू. पुढचा भाग: **next**.",
+        "med_help_during": (
+            "ध्यानात: **ready** · **next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_end_followup": "मूड लॉग: /mood किंवा /checkin.",
+        "med_end_followup_alt": "मूड लॉग: /checkin किंवा /mood.",
+        "med_end_fallback": "स्वतःसाठी वेळ काढला — छान.",
+        "med_error": "त्रुटी. कृपया पुन्हा प्रयत्न करा.",
+        "med_default_intro": "आरामात बसा.",
+        "med_default_continue": "तुमच्या गतीने पुढे जा.",
+        "med_nudge_header": "ध्यान — भाग {part}/{total}",
+        "med_nudge_footer": "कधीही **next** किंवा **end**.",
+        "router_no_chat_pause": "थांबवण्यासाठी खुली चॅट नाही — कसे आहात सांगा.",
+        "router_cancelled": "रद्द. /help कधीही.",
+        "router_meditation_ended": "ध्यान संपले. /help पहा.",
+        "router_meditation_during_help": "ध्यानात: ready, next, pause, resume, status, end. किंवा /cancel.",
+        "router_keep_sharing": "मी ऐकत आहे — जेव्हा हवे तेव्हा आणखी सांगा.",
+        "router_try_again": "पुन्हा प्रयत्न — मेनू किंवा /help.",
+        "router_didnt_catch": "समजले नाही — /help किंवा मेनू.",
+        "router_help_fallback": "/help पहा.",
+        "router_chat_paused": "चॅट थांबवली.",
+        "checkin_error": "चेक-इनमध्ये समस्या. /checkin ने पुन्हा सुरू करा.",
+        "mood_invalid_rating": "1 ते 10 दरम्यान mood rating द्या.",
+        "mood_usage": "1–10 संख्या, नंतर नोट. उदा.: /mood 7 ठीक वाटतं",
+        "mood_log_error": "मूड लॉग झाला नाही. नंतर प्रयत्न करा.",
+        "affirmation_empty": "आत्ता प्रेरणा उपलब्ध नाही.",
+        "summary_error": "सारांश तयार नाही. /analyze वापरा.",
+        "companion_welcome": "स्वागत आहे. जेव्हा हवे तेव्हा येथे.",
+        "companion_goodbye": "काळजी घ्या. परत या.",
+        "companion_listen": "ऐकत आहे — अजून सांगा.",
+        "companion_here": "मी येथे आहे. मनात काय?",
+        "offer_skip": "ठीक — वगळू. मनात काय?",
     },
     "gu": {
         "welcome": (
@@ -273,7 +437,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_footer": "સીધું લખો — રોકવા /done, બંધ /cancel.",
         "chat_done": "શેર કરવા બદલ આભાર. /checkin અથવા નમસ્તે કહો.",
         "chat_cancel": "ચેટ રોકાઈ. જ્યારે જોઈએ પાછા આવો.",
-        "chat_keep_going": "લખતા રaho — અથવા /done.",
+        "chat_keep_going": "હું અહીં છું — આરામથી લખતા રહો.",
         "breathe_choose": (
             "પેટર્ન પસંદ કરો — સમય નીચે બટનો પર.\n\n"
             "/breathe calm | relaxation | energize પણ મોકલી શકો."
@@ -287,6 +451,60 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "breathe_name_calm": "શાંત",
         "breathe_name_relaxation": "આરામ",
         "breathe_name_energize": "ઊર્જા",
+        "med_option_line": "/meditate {med_key} — {duration} મિ. ({parts} ભાગ)",
+        "med_invalid_type": "ખોટો પ્રકાર. /meditate quick | medium | long",
+        "med_returning_intro": (
+            "*{duration} મિ. {type} ધ્યાન* — {parts} ભાગ.\n\n"
+            "શરૂ: **ready** · **next** · **pause** / **resume** · **end**"
+        ),
+        "med_session_footer": (
+            "*{duration} મિનિટ · {parts} ભાગ*\n"
+            "તૈયાર થયા પછી **ready** — ભાગ આપમેળે આવશે.\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_pacing_end": "\n\nપૂરું થયા પછી **end**.",
+        "med_pacing_auto": "\n\nઆગળનો ભાગ ~{gap} મિનિટમાં (**next**).",
+        "med_pacing_pause": "\n\n~{gap} મિનિટ રાહ, પછી **next**.",
+        "med_pacing_next": "\n\nતૈયાર હો તો **next**.",
+        "med_not_started": "હજી ધ્યાન શરૂ નથી. /meditate થી શરૂ કરો.",
+        "med_type_error": "ભૂલ: ધ્યાન પ્રકાર '{type}' મળ્યો નહીં.",
+        "med_status": "સત્ર: {type} ({duration} મિ.)\nભાગ {part}/{total}{paused_suffix}",
+        "med_status_paused_suffix": " · થંભેલું",
+        "med_paused": "થંભેલું. **resume** અથવા **end**.",
+        "med_resumed": "ફરી શરૂ. આગળનો ભાગ ~1 મિનિટ (**next** / **end**).",
+        "med_pause_blocked": "સત્ર થંભેલું. **resume** અથવા **end**.",
+        "med_already_started": "પહેલેથી ચાલે છે. **next**.",
+        "med_help_during": (
+            "ધ્યાનમાં: **ready** · **next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_end_followup": "મૂડ લોગ: /mood અથવા /checkin.",
+        "med_end_followup_alt": "મૂડ લોગ: /checkin અથવા /mood.",
+        "med_end_fallback": "પોતાના માટે સમય — સરસ.",
+        "med_error": "ભૂલ. ફરી પ્રયાસ કરો.",
+        "med_default_intro": "આરામથી બેસો.",
+        "med_default_continue": "તમારી ગતિએ ચાલુ રાખો.",
+        "med_nudge_header": "ધ્યાન — ભાગ {part}/{total}",
+        "med_nudge_footer": "ક્યારેય **next** અથવા **end**.",
+        "router_no_chat_pause": "થંબાવવા ખુલ્લી ચેટ નથી — કેવા છો કહો.",
+        "router_cancelled": "રદ. /help ક્યારેય.",
+        "router_meditation_ended": "ધ્યાન પૂરું. /help જુઓ.",
+        "router_meditation_during_help": "ધ્યાનમાં: ready, next, pause, resume, status, end. અથવા /cancel.",
+        "router_keep_sharing": "હું સાંભળું છું — જ્યારે ઇચ્છો વધુ કહો.",
+        "router_try_again": "ફરી — મેનૂ અથવા /help.",
+        "router_didnt_catch": "સમજાયું નહીં — /help અથવા મેનૂ.",
+        "router_help_fallback": "/help જુઓ.",
+        "router_chat_paused": "ચેટ રોકાઈ.",
+        "checkin_error": "ચેક-ઇનમાં સમસ્યા. /checkin થી ફરી શરૂ.",
+        "mood_invalid_rating": "1 થી 10 વચ્ચે mood rating.",
+        "mood_usage": "1–10 સંખ્યા, પછી નોંધ. ઉદા.: /mood 7 ઠીક",
+        "mood_log_error": "મૂડ લોગ ન થયો. પછી પ્રયાસ.",
+        "affirmation_empty": "હાલ પ્રેરણા ઉપલબ્ધ નથી.",
+        "summary_error": "સારાંશ ન બન્યો. /analyze.",
+        "companion_welcome": "સ્વાગત. જ્યારે જોઈએ અહીં.",
+        "companion_goodbye": "કાળજી રાખો. પાછા આવો.",
+        "companion_listen": "સાંભળું છું — વધુ કહો.",
+        "companion_here": "હું અહીં છું. શું મનમાં?",
+        "offer_skip": "ઠીક — છોડી શકાય. શું મનમાં?",
     },
     "bn": {
         "welcome": (
@@ -331,7 +549,7 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "chat_footer": "সরাসরি লিখুন — থামাতে /done, বন্ধ /cancel।",
         "chat_done": "শেয়ার করার জন্য ধন্যবাদ। /checkin বা নমস্কার বলুন।",
         "chat_cancel": "চ্যাট থামানো। যখন ইচ্ছা ফিরে আসুন।",
-        "chat_keep_going": "লিখতে থাকুন — অথবা /done।",
+        "chat_keep_going": "আমি এখানেই — আস্তে আস্তে লিখতে থাকুন।",
         "breathe_choose": (
             "প্যাটার্ন বেছে নিন — সময় নিচের বোতামে।\n\n"
             "/breathe calm | relaxation | energize ও পাঠাতে পারেন।"
@@ -345,6 +563,60 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "breathe_name_calm": "শান্ত",
         "breathe_name_relaxation": "বিশ্রাম",
         "breathe_name_energize": "শক্তি",
+        "med_option_line": "/meditate {med_key} — {duration} মি. ({parts} অংশ)",
+        "med_invalid_type": "ভুল ধরন। /meditate quick | medium | long",
+        "med_returning_intro": (
+            "*{duration} মি. {type} ধ্যান* — {parts} অংশ।\n\n"
+            "শুরু: **ready** · **next** · **pause** / **resume** · **end**"
+        ),
+        "med_session_footer": (
+            "*{duration} মিনিট · {parts} অংশ*\n"
+            "প্রস্তুত হলে **ready** — অংশ নিজে আসবে।\n"
+            "**next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_pacing_end": "\n\nশেষ হলে **end**।",
+        "med_pacing_auto": "\n\nপরের অংশ ~{gap} মিনিটে (**next**)।",
+        "med_pacing_pause": "\n\n~{gap} মিনিট থামুন, তারপর **next**।",
+        "med_pacing_next": "\n\nপ্রস্তুত হলে **next**।",
+        "med_not_started": "এখনো ধ্যান শুরু হয়নি। /meditate দিয়ে শুরু করুন।",
+        "med_type_error": "ত্রুটি: ধ্যান ধরন '{type}' পাওয়া যায়নি।",
+        "med_status": "সেশন: {type} ({duration} মি.)\nঅংশ {part}/{total}{paused_suffix}",
+        "med_status_paused_suffix": " · থামা",
+        "med_paused": "থামা। **resume** বা **end**।",
+        "med_resumed": "আবার শুরু। পরের অংশ ~1 মিনিট (**next** / **end**)।",
+        "med_pause_blocked": "সেশন থামা। **resume** বা **end**।",
+        "med_already_started": "ইতিমধ্যে চলছে। **next**।",
+        "med_help_during": (
+            "ধ্যানে: **ready** · **next** · **pause** · **resume** · **end** · **status**"
+        ),
+        "med_end_followup": "মুড লগ: /mood বা /checkin।",
+        "med_end_followup_alt": "মুড লগ: /checkin বা /mood।",
+        "med_end_fallback": "নিজের জন্য সময় — ভালো।",
+        "med_error": "ত্রুটি। আবার চেষ্টা করুন।",
+        "med_default_intro": "আরামে বসুন।",
+        "med_default_continue": "নিজের গতিতে চালিয়ে যান।",
+        "med_nudge_header": "ধ্যান — অংশ {part}/{total}",
+        "med_nudge_footer": "যেকোনো সময় **next** বা **end**।",
+        "router_no_chat_pause": "থামানোর খোলা চ্যাট নেই — কেমন আছেন জানান।",
+        "router_cancelled": "বাতিল। /help যেকোনো সময়।",
+        "router_meditation_ended": "ধ্যান শেষ। /help দেখুন।",
+        "router_meditation_during_help": "ধ্যানে: ready, next, pause, resume, status, end। বা /cancel।",
+        "router_keep_sharing": "আমি শুনছি — যখন ইচ্ছা আরও বলুন।",
+        "router_try_again": "আবার — মেনু বা /help।",
+        "router_didnt_catch": "বুঝিনি — /help বা মেনু।",
+        "router_help_fallback": "/help দেখুন।",
+        "router_chat_paused": "চ্যাট থামানো।",
+        "checkin_error": "চেক-ইনে সমস্যা। /checkin দিয়ে আবার শুরু।",
+        "mood_invalid_rating": "1 থেকে 10 এর মধ্যে mood rating।",
+        "mood_usage": "1–10 সংখ্যা, তারপর নোট। যেমন: /mood 7 ঠিক আছে",
+        "mood_log_error": "মুড লগ হয়নি। পরে চেষ্টা।",
+        "affirmation_empty": "এখন অনুপ্রেরণা নেই।",
+        "summary_error": "সারাংশ তৈরি হয়নি। /analyze।",
+        "companion_welcome": "স্বাগত। যখন ইচ্ছা এখানে।",
+        "companion_goodbye": "খেয়াল রাখুন। ফিরে আসুন।",
+        "companion_listen": "শুনছি — আর বলুন।",
+        "companion_here": "আমি আছি। মনে কী?",
+        "offer_skip": "ঠিক — বাদ দিতে পারি। মনে কী?",
     },
 }
 

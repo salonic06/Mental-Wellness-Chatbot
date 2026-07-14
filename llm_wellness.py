@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 MAX_VENT_HISTORY_TURNS = 8  # user+assistant pairs kept for in-session context
 
+# Cache translated meditation/breathing script lines per (lang, text hash).
+_content_cache: dict = {}
+
 # If the model judges a free-text message to indicate self-harm / suicide risk,
 # it returns ONLY this token. The caller then routes to the crisis handler.
 # This is a SECOND safety layer behind the deterministic phrase check.
@@ -42,21 +45,19 @@ SAFETY_DIRECTIVE = (
 )
 
 PERSONA = (
-    "You are 'Wellness Buddy', a warm, grounded companion on WhatsApp for "
-    "journaling, reflection, mood tracking, and mindfulness. You are NOT a "
-    "therapist, doctor, or crisis service, and you never diagnose, label "
-    "conditions, or give medical, medication, legal, or treatment advice."
+    "You are 'Wellness Buddy', a warm, emotionally present companion on WhatsApp. "
+    "You sound like a thoughtful friend who remembers context — never like a FAQ bot, "
+    "survey form, or scripted IVR. You are NOT a therapist, doctor, or crisis service; "
+    "you never diagnose, label conditions, or give medical, medication, legal, or "
+    "treatment advice."
 )
 
 STYLE = (
-    "Style rules: reply in 2-4 short sentences, plain conversational English "
-    "suitable for a WhatsApp text. Be genuine and specific to what the person "
-    "said - never generic or preachy. Validate feelings first. Ask at most one "
-    "gentle question. Do not use headings, bullet lists, or markdown. Emojis are "
-    "optional and rare. If the person hints at self-harm, abuse, or being in "
-    "danger, gently and briefly encourage them to reach out to someone they "
-    "trust or local crisis services - do not attempt to counsel the crisis "
-    "yourself."
+    "Style rules: reply in 2-4 short sentences suitable for WhatsApp. Be specific to "
+    "what they said — mirror their language and energy. Validate feelings first. Ask at "
+    "most one gentle question. No headings, bullet lists, markdown, or feature tours. "
+    "Never list slash commands or explain how to use the app unless they explicitly ask. "
+    "Avoid clichés ('I'm here for you' alone, 'just breathe'). Sound human and varied."
 )
 
 
@@ -64,13 +65,7 @@ def _base_system(user_phone: str = "", hint_text: str = "") -> str:
     from languages import llm_language_directive
 
     if user_phone:
-        style = (
-            "Style rules: reply in 2-4 short sentences suitable for WhatsApp. "
-            "Be genuine and specific to what they said. Validate feelings first. "
-            "Ask at most one gentle question. No headings, bullet lists, or markdown. "
-            "Emojis optional and rare. "
-            + llm_language_directive(user_phone)
-        )
+        style = STYLE + " " + llm_language_directive(user_phone)
     else:
         style = STYLE
     return f"{PERSONA}\n\n{style}"
@@ -170,13 +165,13 @@ def empathetic_vent_reply(
         + (
             f"Detected emotional tone (latest message): {tone}.\n"
             f'Their latest message: "{user_text}"\n\n'
-            "Respond as their wellness companion. Acknowledge what they shared "
-            "specifically, and offer warmth or one small, optional next step "
-            "(such as taking a breath, or naming what they need)."
+            "Respond as their wellness companion. Reflect something specific they said — "
+            "not a generic pep talk. Feel human and present. Offer warmth; at most one "
+            "small optional next step in plain language (never slash commands)."
         )
     )
     return llm_client.generate(
-        _base_system(user_phone, user_text), user_prompt, temperature=0.75, history=history
+        _base_system(user_phone, user_text), user_prompt, temperature=0.9, history=history
     )
 
 
@@ -280,13 +275,25 @@ def companion_chat(user_phone: str, text: str, intent: str) -> Optional[str]:
     """Natural reply when the user sends free text outside a command flow."""
     context = build_user_context(user_phone)
     intent_guide = {
-        "greeting": "They said hello or opened the chat. Welcome them warmly and invite them to share how they're doing — one gentle question only.",
-        "thanks": "They thanked you. Acknowledge briefly and leave the door open without being pushy.",
-        "goodbye": "They're signing off. Warm, brief send-off — no new tasks.",
-        "vent_hint": "They hinted at distress. Validate first; gently suggest /vent if they want to talk more (don't force it).",
-        "mood_hint": "They mentioned mood or feelings. Suggest /checkin or /mood naturally.",
-        "open_share": "They shared something substantial without a command. Reflect what you heard; suggest /vent for ongoing conversation.",
-        "unknown": "Casual or unclear message. Be welcoming and invite them to share or use the menu.",
+        "greeting": (
+            "They said hello. Welcome them warmly like a friend, not an app. "
+            "Invite how they're doing — one gentle question. No menus or commands."
+        ),
+        "thanks": "They thanked you. Acknowledge briefly; leave the door open.",
+        "goodbye": "They're signing off. Warm brief send-off — no new tasks.",
+        "vent_hint": (
+            "They hinted at distress. Validate first; invite them to share more "
+            "in plain language (not 'type /vent')."
+        ),
+        "mood_hint": (
+            "They mentioned mood. Acknowledge it; invite a short note about how "
+            "they feel, or offer check-in gently in plain language."
+        ),
+        "open_share": (
+            "They shared something substantial. Reflect what you heard specifically; "
+            "invite them to say more if they want."
+        ),
+        "unknown": "Casual message. Be welcoming and curious — no feature list.",
     }.get(intent, "Be a warm wellness companion.")
 
     user_prompt = (
@@ -297,7 +304,35 @@ def companion_chat(user_phone: str, text: str, intent: str) -> Optional[str]:
         "Reply in 1-3 short sentences. No command lists, no bullet points."
     )
     return llm_client.generate(
-        _base_system(user_phone, text), user_prompt, temperature=0.8
+        _base_system(user_phone, text), user_prompt, temperature=0.85
+    )
+
+
+def chat_open_reply(user_phone: str) -> Optional[str]:
+    """Warm opening when the user explicitly starts Talk-it-out / chat mode."""
+    context = build_user_context(user_phone)
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + "They just opened a private space to talk. Welcome them like a trusted "
+        "friend who has time — not a product script. Invite whatever is on their mind. "
+        "Do NOT mention slash commands, menus, buttons, /done, or how to use the app."
+    )
+    return llm_client.generate(
+        _base_system(user_phone), user_prompt, temperature=0.9, max_tokens=120
+    )
+
+
+def chat_already_open_reply(user_phone: str) -> Optional[str]:
+    """Soft ack when they re-tap Talk it out while already chatting."""
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        "They're already talking with you and opened the chat option again. "
+        "Briefly reassure you're still here and listening; invite them to continue. "
+        "No commands, no menus, no instructions."
+    )
+    return llm_client.generate(
+        _base_system(user_phone), user_prompt, temperature=0.85, max_tokens=80
     )
 
 
@@ -345,6 +380,46 @@ def mood_log_reply(user_phone: str, intensity: int, notes: str) -> Optional[str]
     )
 
 
+def localize_wellness_content(user_phone: str, english_text: str, kind: str = "meditation") -> str:
+    """
+    Translate scripted wellness content (meditation parts) into the user's language.
+    Falls back to English when LLM is off or translation fails.
+    """
+    from languages import LLM_LANG, effective_language
+
+    text = (english_text or "").strip()
+    if not text:
+        return text
+
+    lang = effective_language(user_phone)
+    if lang == "en":
+        return text
+
+    cache_key = (lang, kind, text)
+    if cache_key in _content_cache:
+        return _content_cache[cache_key]
+
+    if not llm_client.is_enabled():
+        return text
+
+    target = LLM_LANG.get(lang, "English")
+    prompt = (
+        f"Translate this {kind} guidance into {target}. "
+        "Keep the same calm, gentle tone. Preserve line breaks and ellipsis (...). "
+        "Do not add commands or commentary. Output ONLY the translation.\n\n"
+        f"{text}"
+    )
+    out = llm_client.generate(
+        "You are a precise translator for wellness meditation and breathing scripts.",
+        prompt,
+        temperature=0.2,
+        max_tokens=min(900, max(120, len(text) * 2)),
+    )
+    result = (out or text).strip()
+    _content_cache[cache_key] = result
+    return result
+
+
 def post_session_reflection(user_phone: str, activity: str) -> Optional[str]:
     """Short closing line after meditation or breathing."""
     context = build_user_context(user_phone)
@@ -368,8 +443,9 @@ def personalized_nudge(user_phone: str) -> Optional[str]:
     user_prompt = (
         f"{context}\n\n"
         "Write a brief good-morning check-in nudge (2 sentences max). Reference "
-        "their recent patterns gently — do not quote notes verbatim. Invite a "
-        "/checkin or sharing how they feel. No hashtags."
+        "their recent patterns gently — do not quote notes verbatim. Invite them "
+        "to share how they feel or do a quick check-in in plain language — no slash "
+        "commands. No hashtags."
     )
     return llm_client.generate(
         _base_system(user_phone), user_prompt, temperature=0.75, max_tokens=120

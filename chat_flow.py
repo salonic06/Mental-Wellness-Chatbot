@@ -44,7 +44,15 @@ def enter_chat(user_phone: str, data: Optional[dict] = None) -> None:
 
 def start_chat(user_phone: str) -> str:
     enter_chat(user_phone)
-    return f"{t(user_phone, 'chat_intro')}\n\n{t(user_phone, 'chat_footer')}"
+    try:
+        from llm_wellness import chat_open_reply
+
+        opening = chat_open_reply(user_phone)
+        if opening:
+            return opening
+    except Exception:
+        pass
+    return t(user_phone, "chat_intro")
 
 
 def enter_chat_with_context(

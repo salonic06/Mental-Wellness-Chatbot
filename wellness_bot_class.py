@@ -84,7 +84,9 @@ class WellnessBot:
             notes = parts[1] if len(parts) > 1 else ''
 
             if not 1 <= intensity <= 10:
-                return "Please rate your mood between 1 and 10."
+                from languages import t
+
+                return t(sender, "mood_invalid_rating")
 
             if notes:
                 from sentiment_nlp import detect_crisis, handle_crisis
@@ -177,9 +179,11 @@ class WellnessBot:
             return [str(i) for i in sorted(intervals)]
         return sorted(meditation.get("script", {}).keys(), key=lambda k: int(k))
 
-    def _meditation_pacing_hint(self, meditation: dict, step_index: int, keys: list) -> str:
+    def _meditation_pacing_hint(self, sender: str, meditation: dict, step_index: int, keys: list) -> str:
+        from languages import t
+
         if step_index >= len(keys) - 1:
-            return "\n\nType **end** when you are finished."
+            return t(sender, "med_pacing_end")
 
         intervals = meditation.get("intervals") or []
         try:
@@ -188,18 +192,23 @@ class WellnessBot:
             if nudges_enabled() and step_index < len(keys) - 1 and len(intervals) > step_index + 1:
                 gap = intervals[step_index + 1] - intervals[1]
                 if gap > 0:
-                    return (
-                        f"\n\nNext part arrives automatically in ~{gap} minute(s) "
-                        "(or type **next** to skip ahead)."
-                    )
+                    return t(sender, "med_pacing_auto", gap=str(gap))
         except ImportError:
             pass
 
         if step_index < len(intervals) - 1:
             gap = intervals[step_index + 1] - intervals[step_index]
             if gap > 0:
-                return f"\n\nPause ~{gap} minute(s), then type **next** for the following part."
-        return "\n\nType **next** when you are ready for the following part."
+                return t(sender, "med_pacing_pause", gap=str(gap))
+        return t(sender, "med_pacing_next")
+
+    def _localize_script(self, sender: str, body: str) -> str:
+        try:
+            from llm_wellness import localize_wellness_content
+
+            return localize_wellness_content(sender, body, kind="meditation")
+        except Exception:
+            return body
 
     def _prior_meditation_count(self, sender: str) -> int:
         try:
@@ -230,16 +239,24 @@ class WellnessBot:
         return fallback
 
     def meditation_guide(self, args, sender):
+        from languages import t
+
         if not args.strip():
             options = [
-                f"/meditate {key} — {value['duration']} min ({len(self._meditation_script_keys(value))} parts)"
+                t(
+                    sender,
+                    "med_option_line",
+                    med_key=key,
+                    duration=str(value["duration"]),
+                    parts=str(len(self._meditation_script_keys(value))),
+                )
                 for key, value in self.meditations.items()
             ]
-            return "Choose your meditation:\n" + "\n".join(options)
+            return t(sender, "meditation_choose") + "\n" + "\n".join(options)
 
         meditation_type = args.lower().split()[0]
         if meditation_type not in self.meditations:
-            return "Invalid type. Use: /meditate quick | medium | long"
+            return t(sender, "med_invalid_type")
 
         selected = self.meditations[meditation_type]
         keys = self._meditation_script_keys(selected)
@@ -264,21 +281,26 @@ class WellnessBot:
             conn.close()
 
         if returning:
-            return (
-                f"*{selected['duration']}-min {meditation_type} meditation* — "
-                f"{len(keys)} parts.\n\n"
-                "Type **ready** to begin. **next** skips ahead · **pause** / **resume** · **end**"
+            return t(
+                sender,
+                "med_returning_intro",
+                duration=str(selected["duration"]),
+                type=meditation_type,
+                parts=str(len(keys)),
             )
 
-        intro = selected["script"].get(keys[0], "Find a comfortable position.")
-        return (
-            f"{intro}\n\n"
-            f"*{selected['duration']}-minute session · {len(keys)} parts*\n"
-            "Type **ready** when you're settled — parts arrive automatically.\n"
-            "**next** · **pause** · **resume** · **end** · **status**"
+        intro_raw = selected["script"].get(keys[0], t(sender, "med_default_intro"))
+        intro = self._localize_script(sender, intro_raw)
+        return f"{intro}\n\n" + t(
+            sender,
+            "med_session_footer",
+            duration=str(selected["duration"]),
+            parts=str(len(keys)),
         )
 
     def handle_meditation_progress(self, message, sender):
+        from languages import t
+
         conn = connect()
         cursor = conn.cursor()
 
@@ -292,7 +314,7 @@ class WellnessBot:
             row = cursor.fetchone()
 
             if row is None:
-                return "You haven't started a meditation session yet. Use /meditate to begin."
+                return t(sender, "med_not_started")
 
             meditation_type, start_time, paused, step_index = row
             step_index = step_index or 0
@@ -300,17 +322,22 @@ class WellnessBot:
             if not meditation:
                 execute(cursor, "DELETE FROM active_meditations WHERE user_phone = ?", (sender,))
                 conn.commit()
-                return f"Error: Meditation type '{meditation_type}' not found."
+                return t(sender, "med_type_error", type=meditation_type)
 
             keys = self._meditation_script_keys(meditation)
             script = meditation.get("script", {})
             msg = message.lower().strip()
 
             if msg == "status":
-                return (
-                    f"Session: {meditation_type} ({meditation['duration']} min)\n"
-                    f"Part {step_index + 1} of {len(keys)}"
-                    + (" · paused" if paused else "")
+                paused_suffix = t(sender, "med_status_paused_suffix") if paused else ""
+                return t(
+                    sender,
+                    "med_status",
+                    type=meditation_type,
+                    duration=str(meditation["duration"]),
+                    part=str(step_index + 1),
+                    total=str(len(keys)),
+                    paused_suffix=paused_suffix,
                 )
 
             if msg == "end":
@@ -319,9 +346,9 @@ class WellnessBot:
                 closing = self._post_exercise_line(
                     sender,
                     f"a {meditation['duration']}-minute {meditation_type} meditation",
-                    "Nice work showing up for yourself.",
+                    t(sender, "med_end_fallback"),
                 )
-                return f"{closing}\n\n/mood or /checkin if you want to log how you feel."
+                return f"{closing}\n\n{t(sender, 'med_end_followup')}"
 
             if msg == "pause":
                 execute(
@@ -330,7 +357,7 @@ class WellnessBot:
                     (sender,),
                 )
                 conn.commit()
-                return "Paused. Type **resume** or **end**."
+                return t(sender, "med_paused")
 
             if msg == "resume":
                 execute(
@@ -339,17 +366,14 @@ class WellnessBot:
                     (sender,),
                 )
                 conn.commit()
-                return (
-                    "Resumed. The next part arrives in ~1 minute per step "
-                    "(or type **next** / **end**)."
-                )
+                return t(sender, "med_resumed")
 
             if paused:
-                return "Session is paused. Type **resume** or **end**."
+                return t(sender, "med_pause_blocked")
 
             if msg in ("ready", "next"):
                 if msg == "ready" and step_index > 0:
-                    return "Session already started. Type **next** for the next part."
+                    return t(sender, "med_already_started")
 
                 new_step = 1 if msg == "ready" else step_index + 1
                 if new_step >= len(keys):
@@ -362,9 +386,11 @@ class WellnessBot:
                     closing = self._post_exercise_line(
                         sender,
                         f"a {meditation['duration']}-minute {meditation_type} meditation",
-                        script.get(keys[-1], "Well done."),
+                        self._localize_script(
+                            sender, script.get(keys[-1], t(sender, "med_end_fallback"))
+                        ),
                     )
-                    return f"{closing}\n\n/checkin or /mood if you want to capture how you feel."
+                    return f"{closing}\n\n{t(sender, 'med_end_followup_alt')}"
 
                 if msg == "ready" and not start_time:
                     execute(
@@ -384,19 +410,17 @@ class WellnessBot:
                 from meditation_scheduler import clean_script_body
 
                 body = clean_script_body(
-                    script.get(keys[new_step], "Continue at your own pace.")
+                    script.get(keys[new_step], t(sender, "med_default_continue"))
                 )
-                hint = self._meditation_pacing_hint(meditation, new_step, keys)
+                body = self._localize_script(sender, body)
+                hint = self._meditation_pacing_hint(sender, meditation, new_step, keys)
                 return f"{body}{hint}"
 
-            return (
-                "During meditation: **ready** (start) · **next** (next part) · "
-                "**pause** · **resume** · **end** · **status**"
-            )
+            return t(sender, "med_help_during")
         except Exception as e:
             if is_db_error(e):
                 logger.error("Database error in handle_meditation_progress: %s", e)
-                return "An error occurred. Please try again later."
+                return t(sender, "med_error")
             raise
         finally:
             conn.close()
@@ -413,7 +437,9 @@ class WellnessBot:
 
         if self.affirmations:
             return random.choice(self.affirmations)
-        return "Sorry, no affirmations available right now."
+        from languages import t
+
+        return t(sender, "affirmation_empty")
 
     def weekly_summary_command(self, args, sender):
         try:
@@ -422,10 +448,9 @@ class WellnessBot:
             return weekly_summary_text(sender)
         except Exception as e:
             logger.error("Weekly summary failed: %s", e)
-            return (
-                "Couldn't build your weekly summary right now. "
-                "Try /analyze for a quick 7-day average."
-            )
+            from languages import t
+
+            return t(sender, "summary_error")
 
     def start_checkin_command(self, args, sender):
         from checkin_flow import start_checkin

@@ -83,23 +83,25 @@ def classify_free_text(text: str) -> str:
     return "unknown"
 
 
-def _fallback_reply(intent: str, text: str) -> str:
+def _fallback_reply(user_phone: str, intent: str, text: str) -> str:
+    from languages import t
+
     if intent == "greeting":
         return (
             "Hey — good to hear from you. How are you really doing right now?"
         )
     if intent == "thanks":
-        return "You're welcome. I'm here whenever you need me."
+        return t(user_phone, "companion_welcome")
     if intent == "goodbye":
-        return "Take care of yourself. I'll be here when you want to check back in."
+        return t(user_phone, "companion_goodbye")
     if intent in AUTO_CHAT_INTENTS:
-        return "I'm listening — tell me more."
+        return t(user_phone, "companion_listen")
     if intent == "mood_hint":
         return (
             "Want to log how you're feeling? /checkin walks you through it, "
             "or send /mood 6 with a short note for a quick log."
         )
-    return "I'm here with you. What's on your mind?"
+    return t(user_phone, "companion_here")
 
 
 def companion_reply(user_phone: str, text: str, intent: str) -> str:
@@ -112,7 +114,7 @@ def companion_reply(user_phone: str, text: str, intent: str) -> str:
             return llm
     except Exception:
         pass
-    return _fallback_reply(intent, text)
+    return _fallback_reply(user_phone, intent, text)
 
 
 def _chat_followup_buttons() -> list[Button]:

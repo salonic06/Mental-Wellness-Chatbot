@@ -34,7 +34,7 @@ def _nudge_body(user_phone: str) -> str:
 
         custom = personalized_nudge(user_phone)
         if custom:
-            return custom + "\n\n/checkin anytime."
+            return custom
     except Exception:
         pass
     return NUDGE_MESSAGE
