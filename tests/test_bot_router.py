@@ -11,6 +11,9 @@ def test_start_shows_menu_not_language_picker(tmp_db, user_phone, monkeypatch):
     assert reply.list_sections is not None
     ids = [row["id"] for row in reply.list_sections[0]["rows"]]
     assert "cmd_language" in ids
+    assert "cmd_remind" in ids
+    assert "cmd_care" in ids
+    assert "cmd_help" in ids
     assert "lang_hi" not in ids
 
 
@@ -63,8 +66,16 @@ def test_crisis_interrupts(tmp_db, user_phone, monkeypatch):
 def test_remind_on_off(tmp_db, user_phone, monkeypatch):
     monkeypatch.setenv("ADMIN_NUMBERS", "")
     on = process_message(user_phone, "/remind on")
-    assert "ON" in on.text or "Reminder saved" in on.text
+    assert "ON" in on.text or "Reminder saved" in on.text or "Morning companion" in on.text
     off = process_message(user_phone, "/remind off")
+    assert "OFF" in off.text
+
+
+def test_care_on_off(tmp_db, user_phone, monkeypatch):
+    monkeypatch.setenv("ADMIN_NUMBERS", "")
+    on = process_message(user_phone, "/care on")
+    assert "ON" in on.text or "Care pings" in on.text
+    off = process_message(user_phone, "/care off")
     assert "OFF" in off.text
 
 

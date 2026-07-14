@@ -179,3 +179,49 @@ def patterns_context_block(user_phone: str) -> str:
         lines.append(f"Recent average mood: {p['avg_mood']}/10 ({p['entry_count']} entries).")
     lines.extend(p["insights"][:3])
     return "Observed patterns (use gently, do not quote as diagnosis):\n" + "\n".join(lines)
+
+
+def care_ping_reason(user_phone: str) -> Optional[str]:
+    """
+    Whether a gentle care outreach is warranted.
+
+    Returns a short reason key for copy/LLM, or None. Never keys off crisis flags.
+    Does not decide WhatsApp session eligibility — scheduler handles that.
+    """
+    p = detect_user_patterns(user_phone, days=14)
+    if p["mood_trend"] == "down" and p["entry_count"] >= 4:
+        return "trend_down"
+    if p["avg_mood"] is not None and p["avg_mood"] <= 4.0 and p["entry_count"] >= 3:
+        return "low_avg"
+    if (
+        p.get("negative_vent_ratio") is not None
+        and p["negative_vent_ratio"] >= 0.5
+        and (p.get("vent_sessions") or 0) >= 3
+    ):
+        return "heavy_vent"
+
+    # Quiet on check-ins lately after previously logging — soft presence cue.
+    since = (datetime.now() - timedelta(days=14)).isoformat()
+    recent = (datetime.now() - timedelta(days=2)).isoformat()
+    conn = db_paths.connect()
+    try:
+        c = conn.cursor()
+        execute(
+            c,
+            """SELECT COUNT(*) FROM checkins
+               WHERE user_phone = ? AND created_at >= ? AND created_at < ?""",
+            (user_phone, since, recent),
+        )
+        older = (c.fetchone() or (0,))[0] or 0
+        execute(
+            c,
+            """SELECT COUNT(*) FROM checkins
+               WHERE user_phone = ? AND created_at >= ?""",
+            (user_phone, recent),
+        )
+        newest = (c.fetchone() or (0,))[0] or 0
+    finally:
+        conn.close()
+    if older >= 2 and newest == 0:
+        return "quiet_checkins"
+    return None

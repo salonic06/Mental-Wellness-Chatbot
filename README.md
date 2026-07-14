@@ -199,3 +199,4 @@ Buttons/lists for language, meditate, breathe, check-in category, vent follow-up
 9. ~~Optional LLM + eval harness~~ → `llm_wellness.py` + `tests/test_llm_eval.py`  
 10. ~~Multilingual (5 Indian languages)~~  
 11. Meta **production** access (beyond tester list)  
+12. Proactive companion nudges (morning notes + care pings) → [docs/REMINDERS_NEXT.md](docs/REMINDERS_NEXT.md)  

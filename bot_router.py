@@ -166,6 +166,9 @@ def _handle_offer_dispatch(sender: str, offer_msg: str, session: dict, bot: Well
 
 def process_message(sender: str, raw_text: str) -> BotReply:
     """Route inbound WhatsApp text or interactive id to handlers."""
+    from checkin_nudge_scheduler import touch_last_seen
+
+    touch_last_seen(sender)
     bot = get_bot()
     cmd_map = load_commands()
     stripped = normalize_inbound(raw_text.strip())

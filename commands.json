@@ -13,5 +13,6 @@
   "/ping": "admin_ping_command",
   "/invite": "admin_invite_command",
   "/remind": "remind_command",
+  "/care": "care_command",
   "/language": "language_command"
 }

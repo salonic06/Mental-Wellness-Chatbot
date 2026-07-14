@@ -519,43 +519,111 @@ class WellnessBot:
 
     def remind_command(self, args, sender):
         from checkin_nudge_scheduler import (
+            VALID_MODES,
             _nudge_hour,
             _nudge_window_minutes,
             get_reminder_status,
             nudges_enabled,
             set_daily_reminder,
+            set_reminder_mode,
         )
 
-        sub = (args or "").strip().lower()
+        parts = (args or "").strip().split(None, 1)
+        sub = (parts[0] if parts else "").lower()
+        rest = (parts[1] if len(parts) > 1 else "").strip().lower()
         tz_name = os.environ.get("TIMEZONE", "UTC")
         hour = _nudge_hour()
         window = _nudge_window_minutes()
+        end_h = hour + (window - 1) // 60
+        end_m = (window - 1) % 60
 
         if sub in ("on", "enable", "yes"):
-            set_daily_reminder(sender, True)
+            mode = rest if rest in VALID_MODES else "both"
+            set_daily_reminder(sender, True, mode=mode)
             if not nudges_enabled():
                 return (
                     "Reminder saved. Note: server has ENABLE_DAILY_CHECKIN_NUDGES=false, "
                     "so pushes will not run until your host enables it."
                 )
             return (
-                f"Daily reminder is **ON**.\n"
-                f"You'll get one message every morning around **{hour}:00** "
-                f"({hour}:00–{hour}:{window - 1:02d} {tz_name}) until you send **/remind off**.\n"
-                "First nudge: next time that window comes (not in the evening)."
+                f"Morning companion is **ON** (mode: **{mode}**).\n"
+                f"You'll get one message in roughly **{hour}:00–{end_h}:{end_m:02d} {tz_name}** "
+                f"until **/remind off**.\n"
+                "Modes: `/remind mode affirmation` · `checkin` · `both`\n"
+                "Also try **/care on** for extra check-ins when things look rough.\n\n"
+                "_Needs the bot host awake (e.g. UptimeRobot pinging /health) and "
+                "that you've messaged within ~24h (WhatsApp rule)._"
             )
         if sub in ("off", "disable", "no"):
             set_daily_reminder(sender, False)
-            return "Daily reminder is **OFF**. You won't get morning nudges anymore."
+            return "Morning companion is **OFF**. Evening care pings are unchanged — use **/care off** for those."
+        if sub == "mode" and rest in VALID_MODES:
+            set_reminder_mode(sender, rest)
+            status = get_reminder_status(sender)
+            on = "ON" if status["enabled"] else "OFF"
+            return (
+                f"Morning mode set to **{rest}**. Reminder is currently **{on}**.\n"
+                "Send **/remind on** if it is off."
+            )
+        if sub == "mode":
+            return "Usage: `/remind mode affirmation` · `checkin` · `both`"
+
         status = get_reminder_status(sender)
         state = "ON" if status["enabled"] else "OFF"
         last = status["last_sent_date"] or "never"
+        mode = status.get("mode") or "both"
+        care = "ON" if status.get("care_enabled") else "OFF"
         if status["enabled"]:
             return (
-                f"Daily reminder: **{state}** (every ~{hour}:00 {tz_name} until /remind off).\n"
-                f"Last sent: {last}."
+                f"Morning companion: **{state}** · mode **{mode}** "
+                f"(~{hour}:00–{end_h}:{end_m:02d} {tz_name}).\n"
+                f"Care pings: **{care}**. Last morning send: {last}.\n"
+                "`/remind off` · `/remind mode …` · `/care on|off`"
             )
-        return f"Daily reminder: **{state}**. Last sent: {last}. Send **/remind on** to start."
+        return (
+            f"Morning companion: **{state}** (mode {mode}). Care pings: **{care}**. "
+            f"Last morning send: {last}.\n"
+            "Send **/remind on** to start · **/care on** for gentle low-mood check-ins."
+        )
+
+    def care_command(self, args, sender):
+        from checkin_nudge_scheduler import (
+            _care_hour,
+            _care_min_days_between,
+            care_pings_enabled,
+            get_reminder_status,
+            set_care_enabled,
+        )
+
+        sub = (args or "").strip().lower()
+        tz_name = os.environ.get("TIMEZONE", "UTC")
+        hour = _care_hour()
+
+        if sub in ("on", "enable", "yes"):
+            set_care_enabled(sender, True)
+            if not care_pings_enabled():
+                return (
+                    "Care pings saved. Note: server has care pings disabled "
+                    "(ENABLE_CARE_PINGS / ENABLE_DAILY_CHECKIN_NUDGES)."
+                )
+            return (
+                f"Care pings are **ON**.\n"
+                f"If mood trends look rough, I may gently check in around **{hour}:00 {tz_name}** "
+                f"(at most about every {_care_min_days_between()} day(s)).\n"
+                "Never a flood — and only while WhatsApp still allows free messages "
+                "(you've messaged within ~24h). **/care off** anytime."
+            )
+        if sub in ("off", "disable", "no"):
+            set_care_enabled(sender, False)
+            return "Care pings are **OFF**."
+
+        status = get_reminder_status(sender)
+        state = "ON" if status.get("care_enabled") else "OFF"
+        last = status.get("last_care_sent_date") or "never"
+        return (
+            f"Care pings: **{state}**. Last care send: {last}.\n"
+            "Send **/care on** for gentle check-ins when things look rough · **/care off** to stop."
+        )
 
     def get_command_and_args(self, message):
         """Return (command, args) only for messages that start with /."""

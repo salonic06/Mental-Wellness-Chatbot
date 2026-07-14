@@ -26,7 +26,8 @@ def _init_postgres() -> None:
                    phone_number TEXT PRIMARY KEY,
                    name TEXT,
                    joined_date TIMESTAMP,
-                   preferred_language TEXT
+                   preferred_language TEXT,
+                   last_seen_at TIMESTAMP
                )""",
             """CREATE TABLE IF NOT EXISTS mood_logs (
                    id SERIAL PRIMARY KEY,
@@ -69,7 +70,11 @@ def _init_postgres() -> None:
             """CREATE TABLE IF NOT EXISTS daily_reminders (
                    user_phone TEXT PRIMARY KEY,
                    enabled INTEGER DEFAULT 0,
-                   last_sent_date TEXT
+                   last_sent_date TEXT,
+                   mode TEXT DEFAULT 'both',
+                   care_enabled INTEGER DEFAULT 0,
+                   last_care_sent_date TEXT,
+                   preferred_minute INTEGER
                )""",
             """CREATE TABLE IF NOT EXISTS webhook_dedup (
                    message_id TEXT PRIMARY KEY,
@@ -80,8 +85,13 @@ def _init_postgres() -> None:
             c.execute(stmt)
         for stmt in (
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP",
             "ALTER TABLE vent_logs ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'vent'",
             "ALTER TABLE active_meditations ADD COLUMN IF NOT EXISTS step_index INTEGER DEFAULT 0",
+            "ALTER TABLE daily_reminders ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'both'",
+            "ALTER TABLE daily_reminders ADD COLUMN IF NOT EXISTS care_enabled INTEGER DEFAULT 0",
+            "ALTER TABLE daily_reminders ADD COLUMN IF NOT EXISTS last_care_sent_date TEXT",
+            "ALTER TABLE daily_reminders ADD COLUMN IF NOT EXISTS preferred_minute INTEGER",
         ):
             c.execute(stmt)
         conn.commit()
@@ -99,7 +109,7 @@ def _init_sqlite(path: str) -> None:
     c.execute(
         """CREATE TABLE IF NOT EXISTS users
            (phone_number TEXT PRIMARY KEY, name TEXT, joined_date DATE,
-            preferred_language TEXT)"""
+            preferred_language TEXT, last_seen_at TEXT)"""
     )
     c.execute(
         """CREATE TABLE IF NOT EXISTS mood_logs
@@ -130,6 +140,10 @@ def _init_sqlite(path: str) -> None:
     except sqlite3.OperationalError:
         pass
     try:
+        c.execute("ALTER TABLE users ADD COLUMN last_seen_at TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
         c.execute("ALTER TABLE meditation_sessions ADD COLUMN started_at DATETIME")
     except sqlite3.OperationalError:
         pass
@@ -146,8 +160,20 @@ def _init_sqlite(path: str) -> None:
     c.execute(
         """CREATE TABLE IF NOT EXISTS daily_reminders
            (user_phone TEXT PRIMARY KEY, enabled INTEGER DEFAULT 0,
-            last_sent_date TEXT)"""
+            last_sent_date TEXT, mode TEXT DEFAULT 'both',
+            care_enabled INTEGER DEFAULT 0, last_care_sent_date TEXT,
+            preferred_minute INTEGER)"""
     )
+    for col_def in (
+        "mode TEXT DEFAULT 'both'",
+        "care_enabled INTEGER DEFAULT 0",
+        "last_care_sent_date TEXT",
+        "preferred_minute INTEGER",
+    ):
+        try:
+            c.execute(f"ALTER TABLE daily_reminders ADD COLUMN {col_def}")
+        except sqlite3.OperationalError:
+            pass
     c.execute(
         """CREATE TABLE IF NOT EXISTS webhook_dedup
            (message_id TEXT PRIMARY KEY, created_at TEXT NOT NULL)"""

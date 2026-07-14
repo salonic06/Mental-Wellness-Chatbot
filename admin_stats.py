@@ -35,6 +35,9 @@ def fetch_bot_stats() -> Dict[str, Any]:
             "reminders_enabled": scalar(
                 "SELECT COUNT(*) FROM daily_reminders WHERE enabled = 1"
             ),
+            "care_enabled": scalar(
+                "SELECT COUNT(*) FROM daily_reminders WHERE care_enabled = 1"
+            ),
             "messages_last_7d": scalar(
                 "SELECT COUNT(*) FROM mood_logs WHERE timestamp >= ?",
                 (week_ago,),
@@ -73,6 +76,7 @@ def format_stats_message(stats: Dict[str, Any]) -> str:
         f"Vent events: {stats['vent_events']} (crisis: {stats['vent_crises']})\n"
         f"Active meditations: {stats['active_meditations']}\n"
         f"Daily reminders on: {stats['reminders_enabled']}\n"
+        f"Care pings on: {stats.get('care_enabled', 0)}\n"
         f"Activity (7d, approx): {stats['messages_last_7d']} logged events\n"
         f"DB: {stats['database_path']} ({stats.get('storage', 'sqlite')})\n"
         f"Meditation nudges: {stats['meditation_nudges']}\n"

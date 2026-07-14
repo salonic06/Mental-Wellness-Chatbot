@@ -55,6 +55,8 @@ STRINGS: Dict[str, Dict[str, str]] = {
             "Hey — I'm your wellness companion.\n\n"
             "Check-ins, open chat, breathing, and meditation — not therapy, "
             "just a steady presence that remembers your mood over time.\n\n"
+            "Want a morning note from me? Menu → *Morning notes*. "
+            "Extra check-ins when things feel rough? Menu → *Care pings*.\n\n"
             "Tell me how you're doing, or tap the menu below.\n"
             "Type /language to switch language."
         ),
@@ -66,10 +68,12 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "language_invalid": "Please pick a language from the list, or send /language hindi | marathi | gujarati | bengali | english.",
         "help": (
             "I'm your wellness companion — talk naturally or tap the menu.\n\n"
-            "• /checkin — guided mood log\n"
+            "• Check-in / /mood — log how you feel\n"
             "• Talk it out — open chat\n"
-            "• /summary — your week + patterns\n"
-            "• /language — change language"
+            "• Affirmation · Breathe · Meditate\n"
+            "• My week — summary + patterns\n"
+            "• Morning notes · Care pings — opt-in companion messages\n"
+            "• Language — switch language"
         ),
         "menu_label": "Wellness menu",
         "help_menu_label": "Quick actions",
@@ -174,6 +178,8 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "welcome": (
             "नमस्ते — मैं आपका स्वास्थ्य साथी हूँ।\n\n"
             "चेक-इन, खुलकर बात, श्वास और ध्यान — थेरेपी नहीं।\n\n"
+            "सुबह का संदेश? मेनू → *सुबह का नोट*। "
+            "कम मूड पर जाँच? मेनू → *केयर पिंग*।\n\n"
             "बताइए आप कैसे हैं, या मेनू खोलें।\n"
             "भाषा बदलने के लिए /language लिखें।"
         ),
@@ -184,10 +190,12 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "language_invalid": "कृपया सूची से भाषा चुनें, या /language hindi | marathi | gujarati | bengali | english भेजें।",
         "help": (
             "स्वाभाविक रूप से बात करें या मेनू इस्तेमाल करें।\n\n"
-            "• /checkin — मूड लॉग\n"
+            "• चेक-इन / /mood — मूड लॉग\n"
             "• बात करें — खुलकर बात\n"
-            "• /summary — हफ्ते का सार\n"
-            "• /language — भाषा बदलें"
+            "• प्रेरणा · श्वास · ध्यान\n"
+            "• मेरा हफ्ता — सार + रुझान\n"
+            "• सुबह का नोट · केयर पिंग — वैकल्पिक संदेश\n"
+            "• भाषा — भाषा बदलें"
         ),
         "menu_label": "स्वास्थ्य मेनू",
         "help_menu_label": "विकल्प",
@@ -286,6 +294,8 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "welcome": (
             "नमस्कार — मी तुमचा आरोग्य सोबती आहे.\n\n"
             "चेक-इन, मोकळं बोलणं, श्वास आणि ध्यान — थेरपी नाही.\n\n"
+            "सकाळचा संदेश? मेनू → *सकाळचा नोट*. "
+            "कमी मूडवर चौकशी? मेनू → *केअर पिंग*.\n\n"
             "कसे आहात ते सांगा, किंवा मेनू उघडा.\n"
             "भाषा बदलण्यासाठी /language."
         ),
@@ -296,10 +306,12 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "language_invalid": "कृपया सूचीतून भाषा निवडा, किंवा /language marathi | hindi | gujarati | bengali | english.",
         "help": (
             "स्वाभाविक बोला किंवा मेनू वापरा.\n\n"
-            "• /checkin — मूड लॉग\n"
+            "• चेक-इन / /mood — मूड लॉग\n"
             "• बोलूया — मोकळं बोलणं\n"
-            "• /summary — आठवड्याचा सार\n"
-            "• /language — भाषा बदला"
+            "• प्रेरणा · श्वास · ध्यान\n"
+            "• माझा आठवडा — सार + प्रवृत्ती\n"
+            "• सकाळचा नोट · केअर पिंग — ऐच्छिक संदेश\n"
+            "• भाषा — भाषा बदला"
         ),
         "menu_label": "आरोग्य मेनू",
         "help_menu_label": "पर्याय",
@@ -398,6 +410,8 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "welcome": (
             "નમસ્તે — હું તમારો આરોગ્ય સાથી છું.\n\n"
             "ચેક-ઇન, ખુલ્લી વાત, શ્વાસ અને ધ્યાન — થેરાપી નહીં.\n\n"
+            "સવારનો સંદેશ? મેનૂ → *સવારની નોંધ*. "
+            "ઓછા મૂડ પર પૂછપરછ? મેનૂ → *કેર પિંગ*.\n\n"
             "કેવા છો કહો, અથવા મેનૂ ખોલો.\n"
             "ભાષા બદલવા /language."
         ),
@@ -408,10 +422,12 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "language_invalid": "કૃપા કરી સૂચિમાંથી ભાષા પસંદ કરો, અથવા /language gujarati | hindi | marathi | bengali | english.",
         "help": (
             "સ્વાભાવિક વાત કરો અથવા મેનૂ વાપરો.\n\n"
-            "• /checkin — મૂડ લોગ\n"
+            "• ચેક-ઇન / /mood — મૂડ લોગ\n"
             "• વાત કરીએ — ખુલ્લી વાત\n"
-            "• /summary — અઠવાડિયાનો સાર\n"
-            "• /language — ભાષા બદલો"
+            "• પ્રેરણા · શ્વાસ · ધ્યાન\n"
+            "• મારો અઠવાડિયો — સાર + વલણ\n"
+            "• સવારની નોંધ · કેર પિંગ — વૈકલ્પિક સંદેશ\n"
+            "• ભાષા — ભાષા બદલો"
         ),
         "menu_label": "આરોગ્ય મેનૂ",
         "help_menu_label": "વિકલ્પો",
@@ -510,6 +526,8 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "welcome": (
             "নমস্কার — আমি আপনার সুস্থতা সঙ্গী।\n\n"
             "চেক-ইন, খোলামেলা কথা, শ্বাস ও ধ্যান — থেরাপি নয়।\n\n"
+            "সকালের নোট? মেনু → *সকালের নোট*। "
+            "খারাপ মুডে খোঁজ? মেনু → *কেয়ার পিং*।\n\n"
             "কেমন আছেন জানান, অথবা মেনু খুলুন।\n"
             "ভাষা বদলতে /language।"
         ),
@@ -520,10 +538,12 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "language_invalid": "তালিকা থেকে ভাষা বেছে নিন, অথবা /language bengali | hindi | marathi | gujarati | english।",
         "help": (
             "স্বাভাবিকভাবে কথা বলুন বা মেনু ব্যবহার করুন।\n\n"
-            "• /checkin — মুড লগ\n"
+            "• চেক-ইন / /mood — মুড লগ\n"
             "• কথা বলি — খোলামেলা কথা\n"
-            "• /summary — সপ্তাহের সারাংশ\n"
-            "• /language — ভাষা বদলান"
+            "• অনুপ্রেরণা · শ্বাস · ধ্যান\n"
+            "• আমার সপ্তাহ — সারাংশ + প্রবণতা\n"
+            "• সকালের নোট · কেয়ার পিং —ঐচ্ছিক বার্তা\n"
+            "• ভাষা — ভাষা বদলান"
         ),
         "menu_label": "সুস্থতা মেনু",
         "help_menu_label": "বিকল্প",
@@ -626,8 +646,11 @@ MENU_ROWS: Dict[str, List[Dict[str, str]]] = {
         {"id": "cmd_vent", "title": "Talk it out", "description": "Open chat"},
         {"id": "cmd_meditate", "title": "Meditate", "description": "3 / 10 / 20 min"},
         {"id": "cmd_breathe", "title": "Breathe", "description": "Calm · relax"},
-        {"id": "cmd_affirmation", "title": "Affirmation", "description": "Boost"},
+        {"id": "cmd_affirmation", "title": "Affirmation", "description": "Boost now"},
         {"id": "cmd_summary", "title": "My week", "description": "Trends"},
+        {"id": "cmd_remind", "title": "Morning notes", "description": "Daily opt-in nudge"},
+        {"id": "cmd_care", "title": "Care pings", "description": "When mood dips"},
+        {"id": "cmd_help", "title": "Help", "description": "All commands"},
         {"id": "cmd_language", "title": "Language", "description": "English · Hindi · more"},
     ],
     "hi": [
@@ -637,6 +660,9 @@ MENU_ROWS: Dict[str, List[Dict[str, str]]] = {
         {"id": "cmd_breathe", "title": "श्वास", "description": "शांत · आराम"},
         {"id": "cmd_affirmation", "title": "प्रेरणा", "description": "हौसला"},
         {"id": "cmd_summary", "title": "मेरा हफ्ता", "description": "रुझान"},
+        {"id": "cmd_remind", "title": "सुबह का नोट", "description": "रोज़ सुबह संदेश"},
+        {"id": "cmd_care", "title": "केयर पिंग", "description": "कम मूड पर जाँच"},
+        {"id": "cmd_help", "title": "मदद", "description": "सभी कमांड"},
         {"id": "cmd_language", "title": "भाषा", "description": "भाषा बदलें"},
     ],
     "mr": [
@@ -646,6 +672,9 @@ MENU_ROWS: Dict[str, List[Dict[str, str]]] = {
         {"id": "cmd_breathe", "title": "श्वास", "description": "शांत · आराम"},
         {"id": "cmd_affirmation", "title": "प्रेरणा", "description": "हौसला"},
         {"id": "cmd_summary", "title": "माझा आठवडा", "description": "प्रवृत्ती"},
+        {"id": "cmd_remind", "title": "सकाळचा नोट", "description": "रोज सकाळी संदेश"},
+        {"id": "cmd_care", "title": "केअर पिंग", "description": "कमी मूडवर चौकशी"},
+        {"id": "cmd_help", "title": "मदत", "description": "सर्व कमांड"},
         {"id": "cmd_language", "title": "भाषा", "description": "भाषा बदला"},
     ],
     "gu": [
@@ -655,6 +684,9 @@ MENU_ROWS: Dict[str, List[Dict[str, str]]] = {
         {"id": "cmd_breathe", "title": "શ્વાસ", "description": "શાંત · આરામ"},
         {"id": "cmd_affirmation", "title": "પ્રેરણા", "description": "હૌસલો"},
         {"id": "cmd_summary", "title": "મારો અઠવાડિયો", "description": "વલણ"},
+        {"id": "cmd_remind", "title": "સવારની નોંધ", "description": "રોજ સવારે સંદેશ"},
+        {"id": "cmd_care", "title": "કેર પિંગ", "description": "ઓછા મૂડ પર પૂછપરછ"},
+        {"id": "cmd_help", "title": "મદદ", "description": "બધા કમાન્ડ"},
         {"id": "cmd_language", "title": "ભાષા", "description": "ભાષા બદલો"},
     ],
     "bn": [
@@ -664,6 +696,9 @@ MENU_ROWS: Dict[str, List[Dict[str, str]]] = {
         {"id": "cmd_breathe", "title": "শ্বাস", "description": "শান্ত · বিশ্রাম"},
         {"id": "cmd_affirmation", "title": "অনুপ্রেরণা", "description": "উৎসাহ"},
         {"id": "cmd_summary", "title": "আমার সপ্তাহ", "description": "প্রবণতা"},
+        {"id": "cmd_remind", "title": "সকালের নোট", "description": "প্রতিদিন সকালে"},
+        {"id": "cmd_care", "title": "কেয়ার পিং", "description": "খারাপ মুডে খোঁজ"},
+        {"id": "cmd_help", "title": "সাহায্য", "description": "সব কমান্ড"},
         {"id": "cmd_language", "title": "ভাষা", "description": "ভাষা বদলান"},
     ],
 }

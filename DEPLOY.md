@@ -42,8 +42,13 @@ Repo must be on GitHub (already synced).
 | `ENABLE_SCHEDULED_BACKUP` | No | `true` (default in blueprint) |
 | `ENABLE_MEDITATION_NUDGES` | No | `true` |
 | `ENABLE_DAILY_CHECKIN_NUDGES` | No | `true` on Render blueprint |
-| `DAILY_NUDGE_HOUR` | No | `9` (send window starts at this hour in `TIMEZONE`) |
-| `DAILY_NUDGE_WINDOW_MINUTES` | No | `30` (only sends in the first N minutes of that hour, e.g. 9:00–9:29 IST) |
+| `DAILY_NUDGE_HOUR` | No | `9` (window starts at this hour in `TIMEZONE`) |
+| `DAILY_NUDGE_WINDOW_MINUTES` | No | `30` local / `120` on Render blueprint (soft-random spread) |
+| `ENABLE_CARE_PINGS` | No | empty = follow daily nudges flag; afternoon pattern pings |
+| `CARE_PING_HOUR` | No | `15` |
+| `CARE_PING_WINDOW_MINUTES` | No | `120` |
+| `CARE_PING_MIN_DAYS` | No | `2` (min days between care pings) |
+| `WHATSAPP_SESSION_HOURS` | No | `23` (skip outbound if user quieter than this) |
 | `DATABASE_URL` | No | Neon Postgres pooled URL — see [docs/NEON.md](docs/NEON.md) |
 | `LLM_PROVIDER` | No | `gemini` (or `none` for rule-based only) |
 | `LLM_API_KEY` | No | Gemini API key when LLM enabled |
@@ -122,10 +127,11 @@ streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server
 |--------|-----|
 | Webhook verify fails | URL must end with `/webhook`; token must match |
 | 401 on send | Refresh or replace `WHATSAPP_ACCESS_TOKEN` — see long-lived token doc |
-| **Bot stops replying after hours** | **Two common causes:** (1) **Free tier sleep** — service spins down after ~15 min idle; Meta webhook may miss the wake window. Fix: [UptimeRobot](https://uptimerobot.com) free monitor pinging `https://YOUR-SERVICE.onrender.com/health` every **10 min**, or upgrade to **Starter**. (2) **Expired token** — temp API Setup tokens die in ~24h; use a **system user long-lived token**. Check `/ping` (admin) or `/health` → `whatsapp.ok`. |
-| Slow first message | Free tier waking up — retry after 30s; keep-alive ping helps |
+| **Bot stops replying after hours** | **Two common causes:** (1) **Free tier sleep** — service spins down after ~15 min idle; Meta webhook may miss the wake window; **morning/care pings also never fire while asleep**. Fix: [UptimeRobot](https://uptimerobot.com) free monitor pinging `https://YOUR-SERVICE.onrender.com/health` every **5–10 min**, or upgrade to **Starter**. (2) **Expired token** — temp API Setup tokens die in ~24h; use a **system user long-lived token**. Check `/ping` (admin) or `/health` → `whatsapp.ok`. |
+| Slow first message | Free tier waking up — retry after 30–60s; keep-alive ping helps |
 | Empty dashboard on Render | Bot DB is separate unless you use `render.full.yaml` |
-| Daily reminder not sent | User must `/remind on`; nudges on; Render awake during **9:00–9:29** (if hour=9, window=30) |
+| Daily reminder not sent | User must `/remind on`; nudges on; **host awake** during the morning window; user messaged within ~24h (WhatsApp session). Check Render logs for `outside WhatsApp session` skips |
+| Care ping not sent | `/care on`; pattern reason (trend down / low mood / etc.); afternoon window; same awake + 24h rules |
 | Nudge at night | Old logic sent any time after 9:00; fixed to morning window only — redeploy latest code |
 
 ---
@@ -194,15 +200,24 @@ When `ENABLE_MEDITATION_NUDGES=true` (default):
 
 Requires the web service to stay running. Free-tier sleep may delay nudges.
 
-## Daily check-in reminders
+## Daily check-in / affirmation reminders
 
 When `ENABLE_DAILY_CHECKIN_NUDGES=true`:
 
-1. User sends **`/remind on`** (opt-in).
-2. Once per local day in the morning window (`DAILY_NUDGE_HOUR` + first `DAILY_NUDGE_WINDOW_MINUTES`, default **9:00–9:29** in `TIMEZONE`).
-3. **`/remind off`** to stop; **`/remind`** for status.
+1. User sends **`/remind on`** (optional mode: `affirmation` · `checkin` · `both`).
+2. Once per local day inside the morning window (`DAILY_NUDGE_HOUR` + `DAILY_NUDGE_WINDOW_MINUTES`), at a soft-random minute per user.
+3. **`/remind mode …`** to change content; **`/remind off`** to stop mornings.
 
-Disable globally: `ENABLE_DAILY_CHECKIN_NUDGES=false`.
+**Care pings** (`ENABLE_CARE_PINGS` or same flag): **`/care on`** → infrequent afternoon message when mood patterns look rough.
+
+**Hard requirements for outbound pings:**
+
+- Host must stay **awake** (UptimeRobot → `/health` every 5–10 min on free Render), or the scheduler thread is frozen while slept.
+- User must have messaged within ~**24 hours** (WhatsApp Cloud API free-form session). Longer silence needs approved message templates later.
+
+Disable globally: `ENABLE_DAILY_CHECKIN_NUDGES=false` (and `ENABLE_CARE_PINGS=false` if set).
+
+See [docs/REMINDERS_NEXT.md](docs/REMINDERS_NEXT.md).
 
 ## Admin commands (Cloud API)
 

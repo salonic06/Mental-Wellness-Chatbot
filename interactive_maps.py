@@ -15,6 +15,8 @@ INTERACTIVE_TO_TEXT: Dict[str, str] = {
     "cmd_affirmation": "/affirmation",
     "cmd_summary": "/summary",
     "cmd_analyze": "/summary",
+    "cmd_remind": "/remind on",
+    "cmd_care": "/care on",
     "cmd_help": "/help",
     "cmd_cancel": "/cancel",
     "med_quick": "/meditate quick",

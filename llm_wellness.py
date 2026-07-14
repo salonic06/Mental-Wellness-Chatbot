@@ -452,6 +452,29 @@ def personalized_nudge(user_phone: str) -> Optional[str]:
     )
 
 
+def personalized_care_ping(user_phone: str, reason: str) -> Optional[str]:
+    """Afternoon companion check-in when mood/patterns look rough."""
+    context = build_user_context(user_phone)
+    reason_hint = {
+        "trend_down": "Their mood scores have dipped lately.",
+        "low_avg": "Their recent average mood has been on the lower side.",
+        "heavy_vent": "Recent conversations carried heavier emotional weight.",
+        "quiet_checkins": "They used to check in and have gone quiet for a couple of days.",
+    }.get(reason, "They could use a gentle check-in.")
+    user_prompt = (
+        f"{SAFETY_DIRECTIVE}\n\n"
+        + (f"{context}\n\n" if context else "")
+        + f"Reason for reaching out (internal, do not quote): {reason_hint}\n\n"
+        "Write a short WhatsApp message (2 sentences max) like a caring friend "
+        "asking how they are holding up. Warm, no diagnosis, no lecture, no "
+        "feature-spam. Do not mention crisis helplines unless they already said "
+        "they are in danger. No hashtags, no slash commands required."
+    )
+    return llm_client.generate(
+        _base_system(user_phone), user_prompt, temperature=0.7, max_tokens=120
+    )
+
+
 def _summary_header(stats: dict) -> str:
     lines = [
         "*Your week*",

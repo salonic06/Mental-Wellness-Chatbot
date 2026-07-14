@@ -26,5 +26,9 @@ services:
         value: "true"
       - key: DAILY_NUDGE_HOUR
         value: "9"
+      - key: DAILY_NUDGE_WINDOW_MINUTES
+        value: "120"
+      - key: CARE_PING_HOUR
+        value: "15"
       - key: TIMEZONE
         value: "Asia/Kolkata"

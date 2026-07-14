@@ -54,6 +54,9 @@ def test_main_menu_includes_language(tmp_db):
     sections = main_menu_sections("919900000003")
     ids = [row["id"] for row in sections[0]["rows"]]
     assert "cmd_language" in ids
+    assert "cmd_remind" in ids
+    assert "cmd_care" in ids
+    assert "cmd_help" in ids
 
 
 def test_localized_chat_intro(tmp_db):

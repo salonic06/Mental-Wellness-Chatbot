@@ -56,7 +56,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT;
 
 - Render web = **free** (may sleep)
 - Neon DB = **free** (persists data)
-- UptimeRobot ping `/health` every 10 min → reduces Render sleep
+- UptimeRobot ping `/health` every **5–10 min** → keeps Render awake so morning/care pings can fire (required for proactive outbound)
 
 Total cost: **$0**.
 
