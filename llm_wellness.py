@@ -69,7 +69,7 @@ def _base_system(user_phone: str = "", hint_text: str = "") -> str:
             "Be genuine and specific to what they said. Validate feelings first. "
             "Ask at most one gentle question. No headings, bullet lists, or markdown. "
             "Emojis optional and rare. "
-            + llm_language_directive(user_phone, hint_text)
+            + llm_language_directive(user_phone)
         )
     else:
         style = STYLE

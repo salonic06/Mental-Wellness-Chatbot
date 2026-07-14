@@ -7,18 +7,14 @@ from checkin_flow import handle_checkin_message
 from command_normalize import is_done_signal, normalize_inbound
 from companion import handle_free_text
 from languages import (
-    detect_language_from_text,
-    LANG_PICKER_MORE_ID,
+    language_list_sections,
     language_picker_reply,
-    language_picker_page2_reply,
     language_set_message,
     main_menu_sections,
     meditation_buttons,
     breathe_buttons,
     chat_followup_buttons,
     checkin_category_list,
-    maybe_auto_set_language,
-    needs_language_setup,
     parse_language_choice,
     set_user_language,
     t,
@@ -96,9 +92,6 @@ def _dispatch_command(
         set_user_state(sender, "initial", session.get("data", {}))
 
     if command == "/start":
-        if needs_language_setup(sender):
-            set_user_state(sender, "language_choose", session.get("data", {}))
-            return language_picker_reply(sender)
         return BotReply(
             msg,
             list_button_label=t(sender, "menu_label"),
@@ -113,6 +106,10 @@ def _dispatch_command(
         )
 
     if command == "/language":
+        if args.strip():
+            parsed = parse_language_choice(args.strip())
+            if parsed:
+                return _apply_language_choice(sender, f"lang_{parsed}")
         set_user_state(sender, "language_choose", session.get("data", {}))
         return language_picker_reply(sender)
 
@@ -182,11 +179,6 @@ def process_message(sender: str, raw_text: str) -> BotReply:
     session = get_user_state(sender)
     current_state = session["state"]
 
-    maybe_auto_set_language(sender, stripped)
-
-    if stripped == LANG_PICKER_MORE_ID:
-        return language_picker_page2_reply(sender)
-
     if stripped.startswith("lang_"):
         parsed = parse_language_choice(stripped)
         if parsed:
@@ -196,10 +188,7 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         parsed = parse_language_choice(stripped)
         if parsed:
             return _apply_language_choice(sender, f"lang_{parsed}")
-        detected = detect_language_from_text(stripped)
-        if detected:
-            return _apply_language_choice(sender, f"lang_{detected}")
-        return language_picker_reply(sender)
+        return BotReply(t(sender, "language_invalid"), list_button_label=t(sender, "lang_list_btn"), list_sections=language_list_sections(sender))
 
     def _dispatch(cmd: str, args: str = "") -> BotReply:
         if cmd == "/analyze":
@@ -222,7 +211,7 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         command, args = bot.get_command_and_args(text_lower)
         if command in ("/done", "/cancel"):
             return BotReply(handle_chat_message(sender, stripped) or "")
-        if command in ("/start", "/help", "/checkin", "/summary", "/analyze", "/mood"):
+        if command in ("/start", "/help", "/checkin", "/summary", "/analyze", "/mood", "/language"):
             clear_user_state(sender)
             return _dispatch(command, args)
         if command and command in CHAT_SLASH_COMMANDS and command in cmd_map:
@@ -233,10 +222,10 @@ def process_message(sender: str, raw_text: str) -> BotReply:
         if command:
             return BotReply("Keep sharing, or /done to pause this chat.")
 
-        msg = handle_chat_message(sender, stripped) or "I'm listening."
+        msg = handle_chat_message(sender, stripped) or t(sender, "chat_keep_going")
         if msg.startswith("__OFFER__:"):
             return _handle_offer_dispatch(sender, msg, session, bot, cmd_map)
-        if msg.startswith("I'm glad you shared") or msg.startswith("Chat paused"):
+        if not is_chatting(sender):
             return BotReply(msg)
         return BotReply(msg, buttons=chat_followup_buttons(sender))
 

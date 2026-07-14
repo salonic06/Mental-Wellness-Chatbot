@@ -134,25 +134,29 @@ class WellnessBot:
             return "Sorry, there was an error logging your mood. Please try again later."
 
     def breathing_exercise(self, args, sender):
+        from languages import t
+
         if not args.strip():
-            return (
-                "Pick a pattern — each shows timing and about how long it takes.\n\n"
-                "Tap a button below, or send /breathe calm | relaxation | energize"
-            )
+            return t(sender, "breathe_choose")
 
         pattern_name = args.lower().split()[0]
         if pattern_name not in self.breathing_patterns:
-            return "Pattern not found. Use: /breathe calm | relaxation | energize"
+            return t(sender, "breathe_not_found")
         pattern = self.breathing_patterns[pattern_name]
         cycle = pattern["inhale"] + pattern["hold"] + pattern["exhale"]
         total_sec = cycle * pattern["rounds"]
         duration = f"~{total_sec // 60} min" if total_sec >= 60 else f"~{total_sec}s"
+        display_name = t(sender, f"breathe_name_{pattern_name}")
 
-        return (
-            f"*{pattern_name.title()} breathing* ({duration} total)\n"
-            f"Inhale {pattern['inhale']}s · hold {pattern['hold']}s · "
-            f"exhale {pattern['exhale']}s — {pattern['rounds']} rounds.\n\n"
-            "Go at your own pace. When you finish, notice how your body feels."
+        return t(
+            sender,
+            "breathe_guide",
+            name=display_name,
+            duration=duration,
+            inhale=str(pattern["inhale"]),
+            hold=str(pattern["hold"]),
+            exhale=str(pattern["exhale"]),
+            rounds=str(pattern["rounds"]),
         )
 
     def clear_active_meditation(self, sender: str) -> None:

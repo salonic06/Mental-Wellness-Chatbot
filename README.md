@@ -1,6 +1,6 @@
 # Mental Wellness Chatbot
 
-WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite or Neon Postgres**, optional **Gemini LLM**, **VADER** vent sentiment, **ML** check-in recommender, **11 Indian languages**, timed meditation nudges, daily check-in reminders, and a **Next.js** analytics dashboard on Vercel.
+WhatsApp wellness companion: **FastAPI**, **Meta WhatsApp Cloud API**, **SQLite or Neon Postgres**, optional **Gemini LLM**, **VADER** vent sentiment, **ML** check-in recommender, **5 Indian languages**, timed meditation nudges, daily check-in reminders, and a **Next.js** analytics dashboard on Vercel.
 
 ## Architecture
 
@@ -24,7 +24,7 @@ Streamlit dashboard.py      ──reads──►  wellness.db   # optional local
 | API / webhooks | **FastAPI** + **Uvicorn** |
 | WhatsApp | **Meta WhatsApp Cloud API** |
 | LLM (optional) | **Gemini** / OpenAI / OpenRouter via `llm_wellness.py` |
-| Multilingual | Script detection + list picker → `users.preferred_language` |
+| Multilingual | 5 languages — explicit `/language` or menu · `users.preferred_language` |
 | Vent mood NLP | **VADER** (`vaderSentiment`) + wellness lexicon tie-break |
 | Crisis safety | Phrase list → crisis flags + safe reply flow |
 | Check-in ML | **Logistic regression** (scikit-learn) on intensity + category + hour |
@@ -91,8 +91,8 @@ py -m pytest tests/test_llm_eval.py -q   # offline LLM safety eval
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Welcome + language picker (11 langs) + register user + menu |
-| `/language` | Change language anytime |
+| `/start` | Welcome + wellness menu (English by default) |
+| `/language` | Change language (English, Hindi, Marathi, Gujarati, Bengali) |
 | `/checkin` | Multi-step check-in → ML/rules suggestion |
 | `/mood 7 note` | Log mood; crisis phrases trigger safety flow |
 | `/breathe` | Breathing patterns (buttons or `/breathe calm`) |
@@ -106,14 +106,16 @@ py -m pytest tests/test_llm_eval.py -q   # offline LLM safety eval
 
 **Admins** (`ADMIN_NUMBERS`): `/stats`, `/ping`, `/invite` (wa.me link)
 
-### Multilingual (11 Indian languages)
+### Multilingual (5 languages)
 
-Supported: English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu.
+Supported: **English, Hindi, Marathi, Gujarati, Bengali**.
 
-- **`/start`** shows a WhatsApp **list picker** to choose language.
-- **Auto-detect**: typing in a native script sets `preferred_language` automatically.
-- **Hindi** menus are fully localized; other languages use English menus with **LLM replies in the user's language** when Gemini is enabled.
-- Preference is stored in Postgres/SQLite for all future conversations.
+- Default is **English** until the user runs **`/language`** or picks **Language** from the menu.
+- **No auto-detect** — stored preference is never overridden by message script.
+- **UI shell** (menus, vent intro, breathe, buttons) uses locale bundles in `languages.py`.
+- **LLM chat** replies in the user's language via system prompt directive.
+
+Set language: `/language`, `/language hindi`, or menu → Language.
 
 ### Meditation flow
 
@@ -195,5 +197,5 @@ Buttons/lists for language, meditate, breathe, check-in category, vent follow-up
 7. ~~Next.js dashboard on Vercel~~ → [docs/DASHBOARD.md](docs/DASHBOARD.md)  
 8. ~~Neon Postgres persistence~~ → [docs/NEON.md](docs/NEON.md)  
 9. ~~Optional LLM + eval harness~~ → `llm_wellness.py` + `tests/test_llm_eval.py`  
-10. ~~Multilingual (11 Indian languages)~~  
+10. ~~Multilingual (5 Indian languages)~~  
 11. Meta **production** access (beyond tester list)  

@@ -155,7 +155,7 @@ def handle_free_text(user_phone: str, text: str) -> BotReply:
     if intent == "mood_hint":
         from languages import effective_language, MENU_ROWS
 
-        lang = effective_language(user_phone, text)
+        lang = effective_language(user_phone)
         week_label = next(
             (r["title"] for r in MENU_ROWS[lang] if r["id"] == "cmd_summary"),
             "My week",

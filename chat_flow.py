@@ -7,13 +7,14 @@ Replaces the old vent-only silo with ambient, multi-turn chat.
 
 from typing import Optional
 
+from languages import t
+
 from patterns import CHAT_STATE, CHAT_STATES, LEGACY_VENT_STATE
 from sentiment_nlp import (
     analyze_sentiment,
     handle_crisis,
     log_vent_event,
     response_for_bucket,
-    vent_intro,
 )
 from state_store import clear_user_state, get_user_state, set_user_state
 
@@ -43,11 +44,7 @@ def enter_chat(user_phone: str, data: Optional[dict] = None) -> None:
 
 def start_chat(user_phone: str) -> str:
     enter_chat(user_phone)
-    intro = vent_intro()
-    return (
-        f"{intro}\n\n"
-        "No commands needed — just talk. /done when you're ready to pause, /cancel to stop."
-    )
+    return f"{t(user_phone, 'chat_intro')}\n\n{t(user_phone, 'chat_footer')}"
 
 
 def enter_chat_with_context(
@@ -83,14 +80,11 @@ def handle_chat_message(user_phone: str, text: str) -> Optional[str]:
     lowered = text.strip().lower()
     if lowered in ("/done", "done", "vent_done"):
         clear_user_state(user_phone)
-        return (
-            "I'm glad you shared that. I'll remember the mood trends — "
-            "come back anytime. /checkin or just say hi."
-        )
+        return t(user_phone, "chat_done")
 
     if lowered in ("/cancel", "cancel"):
         clear_user_state(user_phone)
-        return "Chat paused. I'm here when you need me."
+        return t(user_phone, "chat_cancel")
 
     offer_hit = try_fulfill_in_chat(user_phone, text)
     if offer_hit and offer_hit.startswith("__OFFER__:"):
@@ -124,11 +118,7 @@ def handle_chat_message(user_phone: str, text: str) -> Optional[str]:
 
     reply = response_for_bucket(bucket)
     tone = bucket.replace("_", " ")
-    return (
-        f"{reply}\n\n"
-        f"(Tone: {tone})\n"
-        "Keep going — or /done when you're ready."
-    )
+    return f"{reply}\n\n(Tone: {tone})\n{t(user_phone, 'chat_keep_going')}"
 
 
 # Backward-compatible aliases used by /vent and tests

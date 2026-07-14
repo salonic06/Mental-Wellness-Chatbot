@@ -164,7 +164,7 @@ They save your test business number from API Setup and message it like any conta
 
 ### Step C — First message
 
-They type **`/start`**, pick a **language** from the list (or type in Hindi/Tamil/etc. to auto-detect), then use **Open menu** or slash commands (`/checkin`, `/vent`, `/meditate quick`, `/language`, etc.).
+They type **`/start`**, then **`/language`** (or menu → Language) to pick a language, then use **Open menu** or slash commands (`/checkin`, `/vent`, `/meditate quick`, etc.).
 
 ### What you maintain
 
